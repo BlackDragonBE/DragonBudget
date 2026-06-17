@@ -1,0 +1,228 @@
+import { useEffect, useState, type ReactNode } from 'react';
+import { api } from '../api';
+import { euros, shortDate } from '../format';
+import { useCategories } from '../useCategories';
+import type { Category, Rule, RulePreview, RuleSuggestion } from '../types';
+
+const FIELDS = [
+  { v: 'details', label: 'Details' },
+  { v: 'counterparty_name', label: 'Counterparty name' },
+  { v: 'message', label: 'Message' },
+];
+const TYPES = [
+  { v: 'contains', label: 'contains' },
+  { v: 'starts_with', label: 'starts with' },
+  { v: 'equals', label: 'equals' },
+];
+
+export default function Rules() {
+  const { categories } = useCategories();
+  const [rules, setRules] = useState<Rule[]>([]);
+  const [suggestions, setSuggestions] = useState<RuleSuggestion[]>([]);
+  const [applyMsg, setApplyMsg] = useState('');
+
+  const reload = () => api<Rule[]>('/rules').then(setRules);
+  const reloadSuggestions = () => api<RuleSuggestion[]>('/rules/suggestions').then(setSuggestions);
+  useEffect(() => { reload(); reloadSuggestions(); }, []);
+
+  async function applyAll() {
+    const { updated } = await api<{ updated: number }>('/rules/apply', { method: 'POST', body: '{}' });
+    setApplyMsg(`Re-ran rules: ${updated} transaction(s) updated.`);
+  }
+
+  async function accept(id: number) {
+    await api(`/rules/suggestions/${id}/accept`, { method: 'POST', body: '{}' });
+    reload();
+    reloadSuggestions();
+  }
+  async function dismiss(id: number) {
+    await api(`/rules/suggestions/${id}/dismiss`, { method: 'POST', body: '{}' });
+    reloadSuggestions();
+  }
+
+  return (
+    <div className="max-w-3xl space-y-5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold">Category rules</h2>
+        <button onClick={applyAll} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">
+          Re-run rules now
+        </button>
+      </div>
+      {applyMsg && <p className="rounded bg-green-50 px-3 py-2 text-sm text-green-700">{applyMsg}</p>}
+
+      {suggestions.length > 0 && (
+        <div className="space-y-2 rounded border border-blue-200 bg-blue-50 p-4">
+          <h3 className="text-sm font-medium text-blue-800">Suggested rules</h3>
+          {suggestions.map((s) => (
+            <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded bg-white px-3 py-2 text-sm">
+              <span>
+                Transactions containing <span className="font-medium">“{s.token}”</span> →{' '}
+                <span>{s.category_icon} {s.category_name}</span>{' '}
+                <span className="text-slate-400">({s.match_count} uncategorized match)</span>
+              </span>
+              <span className="flex gap-2">
+                <button onClick={() => accept(s.id)} className="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white">
+                  Accept
+                </button>
+                <button onClick={() => dismiss(s.id)} className="rounded border border-slate-300 px-3 py-1 text-xs hover:bg-slate-50">
+                  Dismiss
+                </button>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <NewRuleForm categories={categories} onCreated={reload} />
+
+      <div className="divide-y divide-slate-100 rounded border border-slate-200 bg-white">
+        {rules.length === 0 && <p className="px-3 py-6 text-center text-sm text-slate-400">No rules yet.</p>}
+        {rules.map((r) => (
+          <RuleRow key={r.id} rule={r} onChange={reload} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NewRuleForm({ categories, onCreated }: { categories: Category[]; onCreated: () => void }) {
+  const [categoryId, setCategoryId] = useState('');
+  const [field, setField] = useState('details');
+  const [type, setType] = useState('contains');
+  const [value, setValue] = useState('');
+  const [priority, setPriority] = useState(0);
+  const [preview, setPreview] = useState<RulePreview | null>(null);
+  const [error, setError] = useState('');
+
+  const body = () => ({ match_field: field, match_type: type, match_value: value });
+
+  async function doPreview() {
+    setError('');
+    if (!value.trim()) return;
+    try {
+      setPreview(await api<RulePreview>('/rules/preview', { method: 'POST', body: JSON.stringify(body()) }));
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function save() {
+    setError('');
+    if (!categoryId) return setError('Pick a category');
+    if (!value.trim()) return setError('Enter a match value');
+    try {
+      await api('/rules', {
+        method: 'POST',
+        body: JSON.stringify({ ...body(), category_id: Number(categoryId), priority }),
+      });
+      setValue('');
+      setPreview(null);
+      onCreated();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  return (
+    <div className="space-y-3 rounded border border-slate-200 bg-white p-4">
+      <h3 className="text-sm font-medium text-slate-600">New rule</h3>
+      <div className="flex flex-wrap items-end gap-2 text-sm">
+        <Field label="When">
+          <select value={field} onChange={(e) => setField(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5">
+            {FIELDS.map((f) => <option key={f.v} value={f.v}>{f.label}</option>)}
+          </select>
+        </Field>
+        <Field label=" ">
+          <select value={type} onChange={(e) => setType(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5">
+            {TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}
+          </select>
+        </Field>
+        <Field label="Value">
+          <input
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="e.g. KRUIDVAT"
+            className="rounded border border-slate-300 px-2 py-1.5"
+          />
+        </Field>
+        <Field label="→ Category">
+          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5">
+            <option value="">Select…</option>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+          </select>
+        </Field>
+        <Field label="Priority">
+          <input
+            type="number"
+            value={priority}
+            onChange={(e) => setPriority(Number(e.target.value))}
+            className="w-20 rounded border border-slate-300 px-2 py-1.5"
+          />
+        </Field>
+      </div>
+
+      <div className="flex gap-2">
+        <button onClick={doPreview} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">
+          Preview matches
+        </button>
+        <button onClick={save} className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white">
+          Save rule
+        </button>
+      </div>
+
+      {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+
+      {preview && (
+        <div className="rounded bg-slate-50 p-3 text-sm">
+          <p className="mb-2 font-medium">{preview.total} existing transaction(s) would match:</p>
+          <ul className="space-y-1">
+            {preview.sample.slice(0, 8).map((t) => (
+              <li key={t.id} className="flex justify-between gap-2">
+                <span className="truncate text-slate-500">
+                  {shortDate(t.execution_date)} · {t.counterparty_name || t.details.slice(0, 50)}
+                </span>
+                <span className="whitespace-nowrap">{euros(t.amount_cents)}</span>
+              </li>
+            ))}
+          </ul>
+          {preview.total > 8 && <p className="mt-1 text-xs text-slate-400">…and {preview.total - 8} more</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RuleRow({ rule, onChange }: { rule: Rule; onChange: () => void }) {
+  const toggle = () => api(`/rules/${rule.id}`, { method: 'PATCH', body: JSON.stringify({ enabled: !rule.enabled }) }).then(onChange);
+  const remove = () => api(`/rules/${rule.id}`, { method: 'DELETE' }).then(onChange);
+
+  return (
+    <div className={`flex flex-wrap items-center gap-2 px-3 py-2 text-sm ${rule.enabled ? '' : 'opacity-50'}`}>
+      <span className="font-mono text-xs text-slate-500">P{rule.priority}</span>
+      <span className="flex-1">
+        <span className="text-slate-500">{rule.match_field} {rule.match_type}</span>{' '}
+        <span className="font-medium">“{rule.match_value}”</span>{' '}
+        <span className="text-slate-400">→</span>{' '}
+        <span>{rule.category_icon} {rule.category_name}</span>
+        {!!rule.created_from_suggestion && (
+          <span className="ml-2 rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-600">suggested</span>
+        )}
+      </span>
+      <button onClick={toggle} className="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50">
+        {rule.enabled ? 'Disable' : 'Enable'}
+      </button>
+      <button onClick={remove} className="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50">
+        Delete
+      </button>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-xs text-slate-400">{label}</span>
+      {children}
+    </label>
+  );
+}

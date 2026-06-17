@@ -1,0 +1,14 @@
+services:
+  budgeting-app:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+    environment:
+      # No default for SESSION_SECRET on purpose: if APP_PASSWORD is set but
+      # SESSION_SECRET is not, the app refuses to start (a default would let it
+      # run with a publicly-known, forgeable signing key).
+      - APP_PASSWORD=${APP_PASSWORD:-}
+      - SESSION_SECRET=${SESSION_SECRET:-}
+    restart: unless-stopped
