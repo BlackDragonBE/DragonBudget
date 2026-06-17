@@ -12,6 +12,13 @@ export function createDb(file: string): DB {
   conn.exec('PRAGMA journal_mode = WAL');
   conn.exec('PRAGMA foreign_keys = ON');
   conn.exec(SCHEMA);
+
+  // Migration: add match_type to rule_suggestions if missing (DESIGN.md §5.2 upgrade)
+  const info = conn.prepare('PRAGMA table_info(rule_suggestions)').all() as { name: string }[];
+  if (!info.some((c) => c.name === 'match_type')) {
+    conn.exec("ALTER TABLE rule_suggestions ADD COLUMN match_type TEXT NOT NULL DEFAULT 'contains'");
+  }
+
   seedCategories(conn);
   return conn;
 }

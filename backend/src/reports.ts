@@ -57,9 +57,16 @@ export function monthReport(db: DB, month: string) {
 // so the series is continuous. One point per day that has activity.
 export function balanceHistory(
   db: DB,
-  opts: { from?: string; to?: string; startCents?: number } = {},
+  opts: { from?: string; to?: string; startCents?: number; currentCents?: number } = {},
 ): { date: string; balance_cents: number }[] {
   let baseline = opts.startCents ?? 0;
+  if (opts.currentCents !== undefined) {
+    const total = db
+      .prepare("SELECT COALESCE(SUM(amount_cents), 0) AS s FROM transactions WHERE status = 'accepted' AND value_date IS NOT NULL")
+      .get() as { s: number };
+    baseline = opts.currentCents - total.s;
+  }
+
   if (opts.from) {
     const before = db
       .prepare("SELECT COALESCE(SUM(amount_cents), 0) AS s FROM transactions WHERE status = 'accepted' AND value_date < ?")

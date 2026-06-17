@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS rule_suggestions (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   token       TEXT NOT NULL UNIQUE,
   match_field TEXT NOT NULL,
+  match_type  TEXT NOT NULL DEFAULT 'contains',
   category_id INTEGER NOT NULL REFERENCES categories(id),
   status      TEXT NOT NULL DEFAULT 'pending',
   created_at  TEXT NOT NULL

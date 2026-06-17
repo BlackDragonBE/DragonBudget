@@ -31,21 +31,21 @@ const eurTick = (v: number) => '€' + Math.round(v / 100);
 
 export default function AllTime() {
   const [preset, setPreset] = useState('6m');
-  const [startEuros, setStartEuros] = useState(() => localStorage.getItem('startingBalance') ?? '0');
+  const [currentEuros, setCurrentEuros] = useState(() => localStorage.getItem('currentBalance') ?? '0');
   const [balance, setBalance] = useState<BalancePoint[]>([]);
   const [trends, setTrends] = useState<CategoryTrends>({ categories: [], data: [] });
 
   useEffect(() => {
     const { fromDate, toDate } = rangeFor(preset);
-    const startCents = Math.round((parseFloat(startEuros.replace(',', '.')) || 0) * 100);
-    const bp = new URLSearchParams({ to: toDate, start_cents: String(startCents) });
+    const currentCents = Math.round((parseFloat(currentEuros.replace(',', '.')) || 0) * 100);
+    const bp = new URLSearchParams({ to: toDate, current_cents: String(currentCents) });
     if (fromDate) bp.set('from', fromDate);
     api<BalancePoint[]>(`/reports/balance-history?${bp}`).then(setBalance);
 
     const tp = new URLSearchParams({ to: toDate.slice(0, 7) });
     if (fromDate) tp.set('from', fromDate.slice(0, 7));
     api<CategoryTrends>(`/reports/category-trends?${tp}`).then(setTrends);
-  }, [preset, startEuros]);
+  }, [preset, currentEuros]);
 
   return (
     <div className="space-y-5">
@@ -53,10 +53,10 @@ export default function AllTime() {
         <h2 className="text-xl font-semibold">All-time overview</h2>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <label className="flex items-center gap-1 text-slate-500">
-            Start balance €
+            Current balance €
             <input
-              value={startEuros}
-              onChange={(e) => { setStartEuros(e.target.value); localStorage.setItem('startingBalance', e.target.value); }}
+              value={currentEuros}
+              onChange={(e) => { setCurrentEuros(e.target.value); localStorage.setItem('currentBalance', e.target.value); }}
               className="w-24 rounded border border-slate-300 px-2 py-1"
             />
           </label>

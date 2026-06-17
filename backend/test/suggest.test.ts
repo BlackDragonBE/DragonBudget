@@ -65,3 +65,60 @@ test('acceptSuggestion: creates a rule, applies it, consumes the suggestion atom
   assert.equal(acceptSuggestion(db, id), null);
   assert.equal((db.prepare("SELECT COUNT(*) AS n FROM category_rules WHERE match_value = 'KRUIDVAT'").get() as { n: number }).n, 1);
 });
+
+function insertTx(db: DB, { name = null as string | null, details = '', cat = null as number | null } = {}): number {
+  return Number(
+    db
+      .prepare(`INSERT INTO transactions
+        (import_hash, amount_cents, account_number, transaction_type, counterparty_name, details, status, created_at, category_id, category_source)
+        VALUES (?,?,?,?,?,?,'accepted','t',?,?)`)
+      .run(`h${++h}`, -1000, 'BE1', 'Kaartbetaling', name, details, cat, cat ? 'manual' : null)
+      .lastInsertRowid,
+  );
+}
+
+test('maybeSuggestRule: prioritizes counterparty_name over details', () => {
+  const db = createDb(':memory:');
+  const a = insertTx(db, { name: 'NETFLIX', details: 'NETFLIX.COM BE', cat: 1 });
+  insertTx(db, { name: 'NETFLIX', details: 'NETFLIX.COM BE' });
+  insertTx(db, { name: 'NETFLIX', details: 'NETFLIX.COM BE' });
+
+  maybeSuggestRule(db, a);
+  const sugg = db.prepare('SELECT * FROM rule_suggestions').all() as any[];
+  assert.equal(sugg.length, 1);
+  assert.equal(sugg[0].token, 'NETFLIX');
+  assert.equal(sugg[0].match_field, 'counterparty_name');
+  assert.equal(sugg[0].match_type, 'equals');
+});
+
+test('maybeSuggestRule: suggests multi-word phrases if adjacent', () => {
+  const db = createDb(':memory:');
+  const a = insertTx(db, { details: 'ALBERT HEIJN 123', cat: 1 });
+  insertTx(db, { details: 'ALBERT HEIJN 456' });
+  insertTx(db, { details: 'ALBERT HEIJN 789' });
+
+  maybeSuggestRule(db, a);
+  const sugg = db.prepare('SELECT * FROM rule_suggestions').all() as any[];
+  assert.equal(sugg.length, 1);
+  assert.equal(sugg[0].token, 'ALBERT HEIJN');
+  assert.equal(sugg[0].match_field, 'details');
+  assert.equal(sugg[0].match_type, 'contains');
+});
+
+test('maybeSuggestRule: noise filtering avoids cross-category tokens', () => {
+  const db = createDb(':memory:');
+  // Token "PARKING" already used in category 2 (Transport)
+  insertTx(db, { details: 'CITY PARKING MECHELEN', cat: 2 });
+
+  // Now we manually categorize a new "PARKING" tx as category 1 (Dining?)
+  const a = insertTx(db, { details: 'RESTAURANT PARKING GENT', cat: 1 });
+  insertTx(db, { details: 'RESTAURANT PARKING GENT' });
+  insertTx(db, { details: 'RESTAURANT PARKING GENT' });
+
+  maybeSuggestRule(db, a);
+  const sugg = db.prepare('SELECT * FROM rule_suggestions').all() as any[];
+  // Should NOT suggest "PARKING" (noisy). Should suggest the most specific non-noisy phrase.
+  assert.equal(sugg.length, 1);
+  assert.equal(sugg[0].token, 'RESTAURANT PARKING GENT');
+});
+

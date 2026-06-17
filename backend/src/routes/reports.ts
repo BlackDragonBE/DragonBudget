@@ -21,12 +21,17 @@ reportsRouter.get('/month', (req, res) => {
   res.json(monthReport(db, month));
 });
 
-// GET /api/reports/balance-history?from=YYYY-MM-DD&to=YYYY-MM-DD&start_cents=
+// GET /api/reports/balance-history?from=YYYY-MM-DD&to=YYYY-MM-DD&start_cents=&current_cents=
 reportsRouter.get('/balance-history', (req, res) => {
   const from = optParam(req.query.from, DATE);
   const to = optParam(req.query.to, DATE);
   if (!from.ok || !to.ok) return res.status(400).json({ error: 'from/to must be YYYY-MM-DD' });
-  res.json(balanceHistory(db, { from: from.value, to: to.value, startCents: req.query.start_cents ? Number(req.query.start_cents) : 0 }));
+  res.json(balanceHistory(db, {
+    from: from.value,
+    to: to.value,
+    startCents: req.query.start_cents ? Number(req.query.start_cents) : undefined,
+    currentCents: req.query.current_cents ? Number(req.query.current_cents) : undefined,
+  }));
 });
 
 // GET /api/reports/category-trends?from=YYYY-MM&to=YYYY-MM

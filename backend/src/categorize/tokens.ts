@@ -21,6 +21,33 @@ export function extractMerchantToken(details: string): string | null {
   return null;
 }
 
+/** Extract meaningful 1, 2, and 3-word phrases from `details`. */
+export function extractMerchantPhrases(details: string): string[] {
+  const tokens = details.toUpperCase().split(/\s+/);
+  const phrases: string[] = [];
+
+  for (let i = 0; i < tokens.length; i++) {
+    if (!isWord(tokens[i]) || BOILERPLATE.has(tokens[i])) continue;
+
+    // 1-word phrase
+    phrases.push(tokens[i]);
+
+    // 2-word phrase (must be adjacent)
+    if (i + 1 < tokens.length && isWord(tokens[i + 1]) && !BOILERPLATE.has(tokens[i + 1])) {
+      const p2 = tokens[i] + ' ' + tokens[i + 1];
+      phrases.push(p2);
+
+      // 3-word phrase
+      if (i + 2 < tokens.length && isWord(tokens[i + 2]) && !BOILERPLATE.has(tokens[i + 2])) {
+        phrases.push(p2 + ' ' + tokens[i + 2]);
+      }
+    }
+  }
+
+  // Return unique phrases, longest first to prioritize specificity.
+  return Array.from(new Set(phrases)).sort((a, b) => b.split(' ').length - a.split(' ').length || b.length - a.length);
+}
+
 export interface KeyableTx {
   counterparty_account: string | null;
   details: string;
