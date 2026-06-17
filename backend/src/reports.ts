@@ -42,6 +42,27 @@ export function monthReport(db: DB, month: string) {
       ORDER BY t.execution_date DESC`)
     .all(month);
 
+  const raw = uncategorized as { amount_cents: number }[];
+  if (raw.length > 0) {
+    let expSum = 0, expCount = 0, incSum = 0, incCount = 0;
+    for (const t of raw) {
+      if (t.amount_cents < 0) { expSum += t.amount_cents; expCount++; }
+      else { incSum += t.amount_cents; incCount++; }
+    }
+    if (expSum < 0) {
+      (categories as any[]).push({
+        category_id: -1, name: 'Uncategorized', icon: '❓', color: '#94a3b8',
+        is_income: 0, spent_cents: expSum, txn_count: expCount, limit_cents: null,
+      });
+    }
+    if (incSum > 0) {
+      (categories as any[]).push({
+        category_id: -1, name: 'Uncategorized', icon: '❓', color: '#94a3b8',
+        is_income: 1, spent_cents: incSum, txn_count: incCount, limit_cents: null,
+      });
+    }
+  }
+
   return {
     month,
     income_cents: totals.income_cents,
