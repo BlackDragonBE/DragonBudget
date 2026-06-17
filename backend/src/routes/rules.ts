@@ -57,6 +57,7 @@ rulesRouter.post('/', (req, res) => {
       p.data.category_id, p.data.match_field, p.data.match_type, p.data.match_value,
       p.data.priority ?? 0, p.data.enabled === false ? 0 : 1,
     );
+  applyRules(db);
   res.status(201).json(getRule(Number(info.lastInsertRowid)));
 });
 
@@ -78,6 +79,7 @@ rulesRouter.patch('/:id', (req, res) => {
   if (d.priority !== undefined) { sets.push('priority = ?'); vals.push(d.priority); }
   if (d.enabled !== undefined) { sets.push('enabled = ?'); vals.push(d.enabled ? 1 : 0); }
   if (sets.length) db.prepare(`UPDATE category_rules SET ${sets.join(', ')} WHERE id = ?`).run(...vals, id);
+  applyRules(db);
   res.json(getRule(id));
 });
 
@@ -85,6 +87,7 @@ rulesRouter.delete('/:id', (req, res) => {
   const id = Number(req.params.id);
   if (!getRule(id)) return res.status(404).json({ error: 'not found' });
   db.prepare('DELETE FROM category_rules WHERE id = ?').run(id);
+  applyRules(db);
   res.status(204).end();
 });
 

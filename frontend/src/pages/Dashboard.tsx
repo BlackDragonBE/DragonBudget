@@ -19,7 +19,9 @@ export default function Dashboard() {
     load();
   }
 
+  const incomeCats = (report?.categories ?? []).filter((c) => c.spent_cents >= 0);
   const expenseCats = (report?.categories ?? []).filter((c) => c.spent_cents < 0);
+  const maxIncome = Math.max(1, ...incomeCats.map((c) => c.spent_cents));
   const maxSpend = Math.max(1, ...expenseCats.map((c) => Math.abs(c.spent_cents)));
 
   return (
@@ -43,6 +45,31 @@ export default function Dashboard() {
           tone={(report?.net_cents ?? 0) < 0 ? 'text-red-600' : 'text-green-700'}
         />
       </div>
+
+      <section className="rounded border border-slate-200 bg-white p-4">
+        <h3 className="mb-3 text-sm font-medium text-slate-600">Income by category</h3>
+        {incomeCats.length === 0 && <p className="text-sm text-slate-400">No income this month.</p>}
+        <div className="space-y-2">
+          {incomeCats.map((c) => {
+            const amount = c.spent_cents;
+            const pct = (amount / maxIncome) * 100;
+            return (
+              <div key={c.category_id} className="text-sm">
+                <div className="flex justify-between">
+                  <span>{c.icon} {c.name} <span className="text-slate-400">· {c.txn_count}</span></span>
+                  <span className="font-medium">{euros(amount)}</span>
+                </div>
+                <div className="mt-1 h-2 w-full overflow-hidden rounded bg-slate-100">
+                  <div
+                    className="h-full rounded"
+                    style={{ width: `${pct}%`, backgroundColor: c.color ?? '#16a34a' }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       <section className="rounded border border-slate-200 bg-white p-4">
         <h3 className="mb-3 text-sm font-medium text-slate-600">Spending by category</h3>
