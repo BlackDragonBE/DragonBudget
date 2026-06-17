@@ -78,7 +78,7 @@ export default function Rules() {
       <div className="divide-y divide-slate-100 rounded border border-slate-200 bg-white">
         {rules.length === 0 && <p className="px-3 py-6 text-center text-sm text-slate-400">No rules yet.</p>}
         {rules.map((r) => (
-          <RuleRow key={r.id} rule={r} onChange={reload} />
+          <RuleRow key={r.id} rule={r} categories={categories} onChange={reload} />
         ))}
       </div>
     </div>
@@ -192,9 +192,150 @@ function NewRuleForm({ categories, onCreated }: { categories: Category[]; onCrea
   );
 }
 
-function RuleRow({ rule, onChange }: { rule: Rule; onChange: () => void }) {
+function RuleRow({ rule, categories, onChange }: { rule: Rule; categories: Category[]; onChange: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [field, setField] = useState(rule.match_field as string);
+  const [type, setType] = useState(rule.match_type as string);
+  const [value, setValue] = useState(rule.match_value);
+  const [categoryId, setCategoryId] = useState(String(rule.category_id));
+  const [priority, setPriority] = useState(rule.priority);
+  const [enabled, setEnabled] = useState(!!rule.enabled);
+  const [preview, setPreview] = useState<RulePreview | null>(null);
+  const [error, setError] = useState('');
+
+  function reset() {
+    setField(rule.match_field);
+    setType(rule.match_type);
+    setValue(rule.match_value);
+    setCategoryId(String(rule.category_id));
+    setPriority(rule.priority);
+    setEnabled(!!rule.enabled);
+    setPreview(null);
+    setError('');
+  }
+
+  function cancel() {
+    setEditing(false);
+    reset();
+  }
+
+  const draftBody = () => ({ match_field: field, match_type: type, match_value: value });
+
+  async function doPreview() {
+    setError('');
+    if (!value.trim()) return;
+    try {
+      setPreview(await api<RulePreview>('/rules/preview', { method: 'POST', body: JSON.stringify(draftBody()) }));
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function save() {
+    setError('');
+    if (!categoryId) return setError('Pick a category');
+    if (!value.trim()) return setError('Enter a match value');
+    try {
+      await api(`/rules/${rule.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          match_field: field,
+          match_type: type,
+          match_value: value,
+          category_id: Number(categoryId),
+          priority,
+          enabled,
+        }),
+      });
+      setEditing(false);
+      onChange();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
   const toggle = () => api(`/rules/${rule.id}`, { method: 'PATCH', body: JSON.stringify({ enabled: !rule.enabled }) }).then(onChange);
   const remove = () => api(`/rules/${rule.id}`, { method: 'DELETE' }).then(onChange);
+
+  if (editing) {
+    return (
+      <div className="space-y-3 px-3 py-2">
+        <div className="flex flex-wrap items-end gap-2 text-sm">
+          <Field label="When">
+            <select value={field} onChange={(e) => setField(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5">
+              {FIELDS.map((f) => <option key={f.v} value={f.v}>{f.label}</option>)}
+            </select>
+          </Field>
+          <Field label=" ">
+            <select value={type} onChange={(e) => setType(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5">
+              {TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}
+            </select>
+          </Field>
+          <Field label="Value">
+            <input
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="e.g. KRUIDVAT"
+              className="rounded border border-slate-300 px-2 py-1.5"
+            />
+          </Field>
+          <Field label="→ Category">
+            <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5">
+              <option value="">Select…</option>
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+            </select>
+          </Field>
+          <Field label="Priority">
+            <input
+              type="number"
+              value={priority}
+              onChange={(e) => setPriority(Number(e.target.value))}
+              className="w-20 rounded border border-slate-300 px-2 py-1.5"
+            />
+          </Field>
+          <Field label="Enabled">
+            <input
+              type="checkbox"
+              checked={enabled}
+              onChange={(e) => setEnabled(e.target.checked)}
+              className="h-5 w-5 rounded border-slate-300"
+            />
+          </Field>
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={doPreview} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">
+            Preview matches
+          </button>
+          <button onClick={save} className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white">
+            Save
+          </button>
+          <button onClick={cancel} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">
+            Cancel
+          </button>
+        </div>
+
+        {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+
+        {preview && (
+          <div className="rounded bg-slate-50 p-3 text-sm">
+            <p className="mb-2 font-medium">{preview.total} existing transaction(s) would match:</p>
+            <ul className="space-y-1">
+              {preview.sample.slice(0, 8).map((t) => (
+                <li key={t.id} className="flex justify-between gap-2">
+                  <span className="truncate text-slate-500">
+                    {shortDate(t.execution_date)} · {t.counterparty_name || t.details.slice(0, 50)}
+                  </span>
+                  <span className="whitespace-nowrap">{euros(t.amount_cents)}</span>
+                </li>
+              ))}
+            </ul>
+            {preview.total > 8 && <p className="mt-1 text-xs text-slate-400">…and {preview.total - 8} more</p>}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={`flex flex-wrap items-center gap-2 px-3 py-2 text-sm ${rule.enabled ? '' : 'opacity-50'}`}>
@@ -210,6 +351,9 @@ function RuleRow({ rule, onChange }: { rule: Rule; onChange: () => void }) {
       </span>
       <button onClick={toggle} className="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50">
         {rule.enabled ? 'Disable' : 'Enable'}
+      </button>
+      <button onClick={() => setEditing(true)} className="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50">
+        Edit
       </button>
       <button onClick={remove} className="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50">
         Delete
