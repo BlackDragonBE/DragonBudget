@@ -102,12 +102,19 @@ export function detectRecurring(db: DB): { detected: number } {
       const expected = amounts[amounts.length - 1];
       const gapDays = gaps.length ? Math.round(median(gaps)) : 30;
       const next = addDays(last, gapDays);
+      const catRow = db.prepare(`
+        SELECT category_id FROM transactions
+        WHERE id IN (${items.map(() => '?').join(',')}) AND category_id IS NOT NULL
+        GROUP BY category_id ORDER BY COUNT(*) DESC LIMIT 1
+      `).get(...items.map((i) => i.id)) as { category_id: number } | undefined;
+      const categoryId = catRow?.category_id ?? null;
+
       const label =
         items.find((i) => i.counterparty_name)?.counterparty_name ||
         extractMerchantToken(items[items.length - 1].details) ||
         key.replace(/^(IBAN|MERCH):/, '');
 
-      upsertRecurring(db, { key, label, expected, frequency, last, next, ids: items.map((i) => i.id) });
+      upsertRecurring(db, { key, label, expected, frequency, last, next, ids: items.map((i) => i.id), categoryId });
       detected++;
     }
   });
@@ -116,7 +123,7 @@ export function detectRecurring(db: DB): { detected: number } {
 
 function upsertRecurring(
   db: DB,
-  r: { key: string; label: string; expected: number; frequency: Frequency; last: string; next: string; ids: number[] },
+  r: { key: string; label: string; expected: number; frequency: Frequency; last: string; next: string; ids: number[]; categoryId: number | null },
 ) {
   const existing = db.prepare('SELECT id FROM recurring_expenses WHERE counterparty_key = ?').get(r.key) as
     | { id: number }
@@ -127,15 +134,16 @@ function upsertRecurring(
     // Keep user-controlled fields (status, label, category); refresh detected metrics.
     id = existing.id;
     db.prepare(`UPDATE recurring_expenses
-                SET expected_amount_cents = ?, frequency = ?, last_seen_date = ?, next_expected_date = ?
-                WHERE id = ?`).run(r.expected, r.frequency, r.last, r.next, id);
+                SET expected_amount_cents = ?, frequency = ?, last_seen_date = ?, next_expected_date = ?,
+                    category_id = COALESCE(category_id, ?)
+                WHERE id = ?`).run(r.expected, r.frequency, r.last, r.next, r.categoryId, id);
   } else {
     id = Number(
       db
         .prepare(`INSERT INTO recurring_expenses
-                  (label, counterparty_key, expected_amount_cents, frequency, status, next_expected_date, last_seen_date)
-                  VALUES (?,?,?,?, 'detected', ?, ?)`)
-        .run(r.label, r.key, r.expected, r.frequency, r.next, r.last).lastInsertRowid,
+                  (label, counterparty_key, expected_amount_cents, frequency, status, category_id, next_expected_date, last_seen_date)
+                  VALUES (?,?,?,?, 'detected', ?, ?, ?)`)
+        .run(r.label, r.key, r.expected, r.frequency, r.categoryId, r.next, r.last).lastInsertRowid,
     );
   }
 
