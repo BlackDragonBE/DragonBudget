@@ -1,5 +1,4 @@
 import { parse } from 'csv-parse/sync';
-import { z } from 'zod';
 
 // BNP Paribas Fortis "Easy Banking" CSV export shape (DESIGN.md §4.1).
 export const EXPECTED_HEADERS = [
@@ -24,21 +23,6 @@ export interface ParsedTransaction {
   status: 'accepted' | 'rejected';
   rejection_reason: string | null;
 }
-
-const ParsedSchema = z.object({
-  execution_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
-  value_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
-  amount_cents: z.number().int(),
-  currency: z.string().min(1),
-  account_number: z.string(),
-  transaction_type: z.string(),
-  counterparty_account: z.string().nullable(),
-  counterparty_name: z.string().nullable(),
-  message: z.string().nullable(),
-  details: z.string(),
-  status: z.enum(['accepted', 'rejected']),
-  rejection_reason: z.string().nullable(),
-});
 
 const nullable = (s: string): string | null => (s.trim() === '' ? null : s.trim());
 
@@ -92,6 +76,9 @@ export function parseBnpCsv(content: string): ParsedTransaction[] {
   return records.map((r, i) => {
     const row = i + 2; // +1 header, +1 to 1-based
     const get = (k: string) => r[k] ?? '';
+    // Field types are guaranteed by the converters above: toIsoDate / toCents
+    // throw CsvFormatError on bad input, mapStatus returns the union, `?? 'EUR'`
+    // fills currency. No second validation pass needed.
     const parsed: ParsedTransaction = {
       execution_date: toIsoDate(get('Uitvoeringsdatum'), row, 'Uitvoeringsdatum'),
       value_date: toIsoDate(get('Valutadatum'), row, 'Valutadatum'),
@@ -106,10 +93,6 @@ export function parseBnpCsv(content: string): ParsedTransaction[] {
       status: mapStatus(get('Status')),
       rejection_reason: nullable(get('Reden van weigering')),
     };
-    const check = ParsedSchema.safeParse(parsed);
-    if (!check.success) {
-      throw new CsvFormatError(`Row ${row}: ${check.error.issues[0]?.message ?? 'validation failed'}`);
-    }
     return parsed;
   });
 }

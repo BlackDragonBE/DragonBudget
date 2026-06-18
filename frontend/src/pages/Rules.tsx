@@ -155,40 +155,14 @@ function NewRuleForm({ categories, onCreated, onOpenTx }: { categories: Category
   return (
     <div className="space-y-3 rounded border border-slate-200 bg-white p-4">
       <h3 className="text-sm font-medium text-slate-600">New rule</h3>
-      <div className="flex flex-wrap items-end gap-2 text-sm">
-        <Field label="When">
-          <select value={field} onChange={(e) => setField(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5">
-            {FIELDS.map((f) => <option key={f.v} value={f.v}>{f.label}</option>)}
-          </select>
-        </Field>
-        <Field label=" ">
-          <select value={type} onChange={(e) => setType(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5">
-            {TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}
-          </select>
-        </Field>
-        <Field label="Value">
-          <input
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder="e.g. KRUIDVAT"
-            className="rounded border border-slate-300 px-2 py-1.5"
-          />
-        </Field>
-        <Field label="→ Category">
-          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5">
-            <option value="">Select…</option>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
-          </select>
-        </Field>
-        <Field label="Priority">
-          <input
-            type="number"
-            value={priority}
-            onChange={(e) => setPriority(Number(e.target.value))}
-            className="w-20 rounded border border-slate-300 px-2 py-1.5"
-          />
-        </Field>
-      </div>
+      <RuleFields
+        categories={categories}
+        field={field} setField={setField}
+        type={type} setType={setType}
+        value={value} setValue={setValue}
+        categoryId={categoryId} setCategoryId={setCategoryId}
+        priority={priority} setPriority={setPriority}
+      />
 
       <div className="flex gap-2">
         <button onClick={doPreview} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">
@@ -201,22 +175,7 @@ function NewRuleForm({ categories, onCreated, onOpenTx }: { categories: Category
 
       {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
-      {preview && (
-        <div className="rounded bg-slate-50 p-3 text-sm">
-          <p className="mb-2 font-medium">{preview.total} existing transaction(s) would match:</p>
-          <ul className="space-y-1">
-            {preview.sample.slice(0, 8).map((t) => (
-              <li key={t.id} onClick={() => onOpenTx(t.id)} className="flex cursor-pointer justify-between gap-2 rounded px-1 hover:bg-slate-100">
-                <span className="truncate text-slate-500">
-                  {shortDate(t.execution_date)} · {t.counterparty_name || t.details.slice(0, 50)}
-                </span>
-                <span className="whitespace-nowrap">{euros(t.amount_cents)}</span>
-              </li>
-            ))}
-          </ul>
-          {preview.total > 8 && <p className="mt-1 text-xs text-slate-400">…and {preview.total - 8} more</p>}
-        </div>
-      )}
+      {preview && <PreviewList preview={preview} onOpenTx={onOpenTx} />}
     </div>
   );
 }
@@ -289,48 +248,15 @@ function RuleRow({ rule, categories, onChange, onOpenTx }: { rule: Rule; categor
   if (editing) {
     return (
       <div className="space-y-3 px-3 py-2">
-        <div className="flex flex-wrap items-end gap-2 text-sm">
-          <Field label="When">
-            <select value={field} onChange={(e) => setField(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5">
-              {FIELDS.map((f) => <option key={f.v} value={f.v}>{f.label}</option>)}
-            </select>
-          </Field>
-          <Field label=" ">
-            <select value={type} onChange={(e) => setType(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5">
-              {TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}
-            </select>
-          </Field>
-          <Field label="Value">
-            <input
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder="e.g. KRUIDVAT"
-              className="rounded border border-slate-300 px-2 py-1.5"
-            />
-          </Field>
-          <Field label="→ Category">
-            <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5">
-              <option value="">Select…</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
-            </select>
-          </Field>
-          <Field label="Priority">
-            <input
-              type="number"
-              value={priority}
-              onChange={(e) => setPriority(Number(e.target.value))}
-              className="w-20 rounded border border-slate-300 px-2 py-1.5"
-            />
-          </Field>
-          <Field label="Enabled">
-            <input
-              type="checkbox"
-              checked={enabled}
-              onChange={(e) => setEnabled(e.target.checked)}
-              className="h-5 w-5 rounded border-slate-300"
-            />
-          </Field>
-        </div>
+        <RuleFields
+          categories={categories}
+          field={field} setField={setField}
+          type={type} setType={setType}
+          value={value} setValue={setValue}
+          categoryId={categoryId} setCategoryId={setCategoryId}
+          priority={priority} setPriority={setPriority}
+          enabled={enabled} setEnabled={setEnabled}
+        />
 
         <div className="flex gap-2">
           <button onClick={doPreview} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">
@@ -346,22 +272,7 @@ function RuleRow({ rule, categories, onChange, onOpenTx }: { rule: Rule; categor
 
         {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
-        {preview && (
-          <div className="rounded bg-slate-50 p-3 text-sm">
-            <p className="mb-2 font-medium">{preview.total} existing transaction(s) would match:</p>
-            <ul className="space-y-1">
-              {preview.sample.slice(0, 8).map((t) => (
-                <li key={t.id} onClick={() => onOpenTx(t.id)} className="flex cursor-pointer justify-between gap-2 rounded px-1 hover:bg-slate-100">
-                  <span className="truncate text-slate-500">
-                    {shortDate(t.execution_date)} · {t.counterparty_name || t.details.slice(0, 50)}
-                  </span>
-                  <span className="whitespace-nowrap">{euros(t.amount_cents)}</span>
-                </li>
-              ))}
-            </ul>
-            {preview.total > 8 && <p className="mt-1 text-xs text-slate-400">…and {preview.total - 8} more</p>}
-          </div>
-        )}
+        {preview && <PreviewList preview={preview} onOpenTx={onOpenTx} />}
       </div>
     );
   }
@@ -397,5 +308,87 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <span className="text-xs text-slate-400">{label}</span>
       {children}
     </label>
+  );
+}
+
+// Shared When/type/Value/Category/Priority grid. RuleRow passes the optional
+// enabled pair to render the extra checkbox; NewRuleForm omits it.
+function RuleFields({
+  categories, field, setField, type, setType, value, setValue,
+  categoryId, setCategoryId, priority, setPriority, enabled, setEnabled,
+}: {
+  categories: Category[];
+  field: string; setField: (v: string) => void;
+  type: string; setType: (v: string) => void;
+  value: string; setValue: (v: string) => void;
+  categoryId: string; setCategoryId: (v: string) => void;
+  priority: number; setPriority: (v: number) => void;
+  enabled?: boolean; setEnabled?: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-end gap-2 text-sm">
+      <Field label="When">
+        <select value={field} onChange={(e) => setField(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5">
+          {FIELDS.map((f) => <option key={f.v} value={f.v}>{f.label}</option>)}
+        </select>
+      </Field>
+      <Field label=" ">
+        <select value={type} onChange={(e) => setType(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5">
+          {TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}
+        </select>
+      </Field>
+      <Field label="Value">
+        <input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="e.g. KRUIDVAT"
+          className="rounded border border-slate-300 px-2 py-1.5"
+        />
+      </Field>
+      <Field label="→ Category">
+        <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5">
+          <option value="">Select…</option>
+          {categories.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+        </select>
+      </Field>
+      <Field label="Priority">
+        <input
+          type="number"
+          value={priority}
+          onChange={(e) => setPriority(Number(e.target.value))}
+          className="w-20 rounded border border-slate-300 px-2 py-1.5"
+        />
+      </Field>
+      {setEnabled && (
+        <Field label="Enabled">
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(e) => setEnabled(e.target.checked)}
+            className="h-5 w-5 rounded border-slate-300"
+          />
+        </Field>
+      )}
+    </div>
+  );
+}
+
+// Shared "N existing transaction(s) would match" preview list.
+function PreviewList({ preview, onOpenTx }: { preview: RulePreview; onOpenTx: (id: number) => void }) {
+  return (
+    <div className="rounded bg-slate-50 p-3 text-sm">
+      <p className="mb-2 font-medium">{preview.total} existing transaction(s) would match:</p>
+      <ul className="space-y-1">
+        {preview.sample.slice(0, 8).map((t) => (
+          <li key={t.id} onClick={() => onOpenTx(t.id)} className="flex cursor-pointer justify-between gap-2 rounded px-1 hover:bg-slate-100">
+            <span className="truncate text-slate-500">
+              {shortDate(t.execution_date)} · {t.counterparty_name || t.details.slice(0, 50)}
+            </span>
+            <span className="whitespace-nowrap">{euros(t.amount_cents)}</span>
+          </li>
+        ))}
+      </ul>
+      {preview.total > 8 && <p className="mt-1 text-xs text-slate-400">…and {preview.total - 8} more</p>}
+    </div>
   );
 }

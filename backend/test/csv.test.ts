@@ -43,6 +43,11 @@ test('parse: rejects a malformed amount', () => {
   assert.throws(() => parseBnpCsv(bad), CsvFormatError);
 });
 
+test('parse: rejects a malformed date', () => {
+  const bad = '﻿' + HEADERS + '\n2026-1;17/06/26;01/01/2026;-1,00;EUR;BE1;Kaartbetaling;;;;DETAILS;Geaccepteerd;\n';
+  assert.throws(() => parseBnpCsv(bad), CsvFormatError);
+});
+
 test('import: is idempotent on re-import (dedup by import_hash)', () => {
   const db = createDb(':memory:');
   const rows = parseBnpCsv(SAMPLE);
