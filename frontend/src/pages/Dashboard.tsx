@@ -85,7 +85,8 @@ export default function Dashboard() {
         <div className="space-y-2">
           {expenseCats.map((c) => {
             const amount = Math.abs(c.spent_cents);
-            const limit = c.limit_cents ?? null;
+            const budget = c.rollover ? (c.available_cents ?? c.limit_cents ?? null) : (c.limit_cents ?? null);
+            const limit = budget;
             const over = limit != null && amount > limit;
             const pct = limit != null ? Math.min(100, (amount / limit) * 100) : (amount / maxSpend) * 100;
             const target = c.category_id === -1 ? 'none' : c.category_id;
@@ -108,7 +109,7 @@ export default function Dashboard() {
                     style={{ width: `${pct}%`, backgroundColor: over ? '#dc2626' : c.color ?? '#64748b' }}
                   />
                 </div>
-                {over && <div className="mt-0.5 text-xs text-red-600 dark:text-red-400">Over budget by {euros(amount - limit!)}</div>}
+                {over && <div className="mt-0.5 text-xs text-red-600 dark:text-red-400">Over budget by {euros(amount - limit!)}{c.rollover && c.available_cents != null && c.available_cents !== c.limit_cents ? ' (incl. carry)' : ''}</div>}
               </Link>
             );
           })}

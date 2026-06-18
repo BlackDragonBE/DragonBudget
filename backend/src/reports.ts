@@ -3,6 +3,23 @@ import type { DB } from './db';
 // All reports exclude rejected transactions (DESIGN.md §3.1.1). Month grouping is
 // on execution_date; balance history (M7) uses value_date.
 
+// Computes the signed cents carried into `month` for a rollover category.
+// = sum of all prior budgets + sum of all prior spending (spending is negative cents).
+// Anchored at the category's first budget month so pre-budget spending is ignored.
+function carryover(db: DB, categoryId: number, month: string): number {
+  const row = db
+    .prepare('SELECT MIN(month) AS m FROM budgets WHERE category_id = ?')
+    .get(categoryId) as { m: string | null };
+  if (!row.m || row.m >= month) return 0;
+  const b = db
+    .prepare('SELECT COALESCE(SUM(limit_cents), 0) AS v FROM budgets WHERE category_id = ? AND month >= ? AND month < ?')
+    .get(categoryId, row.m, month) as { v: number };
+  const s = db
+    .prepare("SELECT COALESCE(SUM(amount_cents), 0) AS v FROM transactions WHERE category_id = ? AND status = 'accepted' AND substr(execution_date, 1, 7) >= ? AND substr(execution_date, 1, 7) < ?")
+    .get(categoryId, row.m, month) as { v: number };
+  return b.v + s.v;
+}
+
 export function monthReport(db: DB, month: string) {
   const totals = db
     .prepare(`
@@ -18,7 +35,7 @@ export function monthReport(db: DB, month: string) {
   // no budget exists (added in M6).
   const categories = db
     .prepare(`
-      SELECT c.id AS category_id, c.name, c.icon, c.color, c.is_income,
+      SELECT c.id AS category_id, c.name, c.icon, c.color, c.is_income, c.rollover,
              COALESCE(s.spent_cents, 0) AS spent_cents,
              COALESCE(s.txn_count, 0) AS txn_count,
              b.limit_cents
@@ -33,6 +50,14 @@ export function monthReport(db: DB, month: string) {
       WHERE c.archived = 0 AND (s.spent_cents IS NOT NULL OR b.limit_cents IS NOT NULL)
       ORDER BY ABS(COALESCE(s.spent_cents, 0)) DESC`)
     .all(month, month);
+
+  // Augment rollover categories with carried-in amount and effective available budget.
+  for (const r of categories as any[]) {
+    if (r.rollover) {
+      r.carried_in_cents = carryover(db, r.category_id, month);
+      r.available_cents = (r.limit_cents ?? 0) + r.carried_in_cents;
+    }
+  }
 
   const uncategorized = db
     .prepare(`

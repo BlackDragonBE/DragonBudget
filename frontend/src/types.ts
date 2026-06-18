@@ -5,6 +5,7 @@ export interface Category {
   color: string | null;
   is_income: number;
   archived: number;
+  rollover: number;
   txn_count: number;
 }
 
@@ -79,9 +80,12 @@ export interface CategorySpend {
   icon: string | null;
   color: string | null;
   is_income: number;
+  rollover?: number;
   spent_cents: number;
   txn_count: number;
-  limit_cents?: number | null; // added by the budget report in M6
+  limit_cents?: number | null;
+  carried_in_cents?: number | null;
+  available_cents?: number | null;
 }
 
 export interface MonthReport {

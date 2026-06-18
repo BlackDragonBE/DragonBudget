@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS categories (
   icon      TEXT,
   color     TEXT,
   is_income INTEGER NOT NULL DEFAULT 0,
-  archived  INTEGER NOT NULL DEFAULT 0
+  archived  INTEGER NOT NULL DEFAULT 0,
+  rollover  INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS transactions (

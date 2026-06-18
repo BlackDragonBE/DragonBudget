@@ -6,13 +6,19 @@ import { useCategories } from '../useCategories';
 import type { MonthReport } from '../types';
 
 export default function Budgets() {
-  const { categories } = useCategories();
+  const { categories, reload } = useCategories();
   const [month, setMonth] = useState(() => localStorage.getItem('budgets-month') ?? thisMonth());
   const [report, setReport] = useState<MonthReport | null>(null);
   const [msg, setMsg] = useState('');
 
   const load = () => api<MonthReport>(`/reports/month?month=${month}`).then(setReport);
   useEffect(() => { setReport(null); load(); setMsg(''); }, [month]);
+
+  async function toggleRollover(categoryId: number, current: number) {
+    await api(`/categories/${categoryId}`, { method: 'PATCH', body: JSON.stringify({ rollover: !current }) });
+    reload();
+    load();
+  }
 
   // category_id -> { spent_cents, limit_cents }
   const byCat = new Map(report?.categories.map((c) => [c.category_id, c]) ?? []);
@@ -120,38 +126,60 @@ export default function Budgets() {
           {expenseCategories.map((c) => {
             const row = byCat.get(c.id);
             const spent = Math.max(0, -(row?.spent_cents ?? 0));
-            const over = row?.limit_cents != null && spent > row.limit_cents;
-            const rawPct = row?.limit_cents ? (spent / row.limit_cents) * 100 : 0;
+            const isRollover = !!(row?.rollover ?? c.rollover);
+            // For rollover categories, compare against available (limit + carry); else limit.
+            const budget = isRollover
+              ? (row?.available_cents ?? row?.limit_cents ?? null)
+              : (row?.limit_cents ?? null);
+            const over = budget != null && spent > budget;
+            const rawPct = budget != null && budget > 0 ? (spent / budget) * 100 : 0;
             const pct = Math.min(100, rawPct);
+            const carried = row?.carried_in_cents;
             return (
               <div key={c.id} className="flex items-center gap-2 px-3 py-2 text-sm">
                 <Link to={`/transactions?month=${month}&category_id=${c.id}&direction=expense`} className="w-40 shrink-0 rounded hover:bg-slate-50 dark:hover:bg-slate-800">{c.icon} {c.name}</Link>
-                <div className="flex flex-1 items-center gap-1.5">
-                  <div className="h-2 flex-1 rounded-full bg-slate-200 dark:bg-slate-700">
-                    {row?.limit_cents ? (
-                      <div
-                        className={`h-2 rounded-full transition-all ${over ? 'bg-red-500' : 'bg-emerald-500'}`}
-                        style={{ width: `${pct}%` }}
-                      />
+                <div className="flex flex-1 flex-col gap-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-2 flex-1 rounded-full bg-slate-200 dark:bg-slate-700">
+                      {budget != null && budget > 0 ? (
+                        <div
+                          className={`h-2 rounded-full transition-all ${over ? 'bg-red-500' : 'bg-emerald-500'}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      ) : null}
+                    </div>
+                    {budget != null && budget > 0 ? (
+                      <span className="w-12 text-right text-xs text-slate-400">{Math.round(rawPct)}%</span>
                     ) : null}
                   </div>
-                  {row?.limit_cents ? (
-                    <span className="w-12 text-right text-xs text-slate-400">{Math.round(rawPct)}%</span>
-                  ) : null}
+                  {isRollover && carried != null && carried !== 0 && (
+                    <span className={`text-xs ${carried > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+                      ↪ {carried > 0 ? '+' : ''}{euros(carried)} carried
+                    </span>
+                  )}
                 </div>
                 <span className={`w-24 text-right ${over ? 'font-semibold text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'}`}>
                   {euros(spent)}
                 </span>
-                <input
-                  key={`${c.id}-${month}-${report ? 'y' : 'n'}`}
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  defaultValue={row?.limit_cents != null ? (row.limit_cents / 100).toFixed(2) : ''}
-                  onBlur={(e) => setLimit(c.id, e.target.value)}
-                  placeholder="—"
-                  className="w-28 rounded border border-slate-300 px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-                />
+                <div className="flex w-28 items-center gap-1">
+                  <input
+                    key={`${c.id}-${month}-${report ? 'y' : 'n'}`}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    defaultValue={row?.limit_cents != null ? (row.limit_cents / 100).toFixed(2) : ''}
+                    onBlur={(e) => setLimit(c.id, e.target.value)}
+                    placeholder="—"
+                    className="w-full rounded border border-slate-300 px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                  />
+                  <button
+                    title={isRollover ? 'Sinking fund on — click to disable' : 'Enable sinking fund (rollover)'}
+                    onClick={() => toggleRollover(c.id, c.rollover)}
+                    className={`shrink-0 rounded px-1 text-base leading-none transition-colors ${isRollover ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400'}`}
+                  >
+                    ↺
+                  </button>
+                </div>
               </div>
             );
           })}
