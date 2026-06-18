@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createDb, type DB } from '../src/db';
-import { detectRecurring, inferFrequency, amountsSimilar, dayGaps } from '../src/recurring/detect';
+import { detectRecurring, inferFrequency, amountsSimilar, dayGaps, filterToMedianCluster } from '../src/recurring/detect';
 
 let h = 0;
 function insertTx(
@@ -78,4 +78,42 @@ test('detectRecurring: preserves user-set dismissed status on re-run', () => {
   detectRecurring(db); // re-run must not resurrect it
   const status = (db.prepare("SELECT status FROM recurring_expenses WHERE counterparty_key = 'MERCH:KRUIDVAT'").get() as { status: string }).status;
   assert.equal(status, 'dismissed');
+});
+
+test('detectRecurring: detects salary despite holiday-pay outliers from same IBAN', () => {
+  const db = createDb(':memory:');
+  const iban = 'BE48091000543027';
+  const name = 'PROVINCIE ANTWERPEN';
+  // 4 monthly salary payments + 2 outliers (partial month, holiday pay) from same IBAN.
+  for (const [date, amt] of [
+    ['2026-01-29', 273900],
+    ['2026-02-26', 274000],
+    ['2026-03-30', 148100], // partial month — outlier
+    ['2026-04-29', 279100],
+    ['2026-05-11', 197800], // holiday pay — outlier
+    ['2026-05-28', 277000],
+  ] as const) {
+    insertTx(db, { date, amount: amt, type: 'Overschrijving', iban, name });
+  }
+
+  const { detected } = detectRecurring(db);
+  assert.equal(detected, 1);
+
+  const row = db.prepare('SELECT label, frequency, expected_amount_cents FROM recurring_expenses').get() as
+    { label: string; frequency: string; expected_amount_cents: number };
+  assert.equal(row.label, 'PROVINCIE ANTWERPEN');
+  assert.equal(row.frequency, 'monthly');
+  assert.equal(row.expected_amount_cents, 277000); // last of the core cluster, not an outlier
+
+  const linkCount = db
+    .prepare(`SELECT COUNT(*) AS n FROM recurring_expense_transactions ret
+              JOIN recurring_expenses r ON r.id = ret.recurring_expense_id`).get() as { n: number };
+  assert.equal(linkCount.n, 4); // only the 4 salary transactions, outliers excluded
+});
+
+test('filterToMedianCluster: keeps core, drops outliers', () => {
+  const mk = (amt: number): any => ({ amount_cents: amt });
+  const core = filterToMedianCluster([mk(273900), mk(274000), mk(148100), mk(279100), mk(197800), mk(277000)].map((x: any, i: number) => ({ ...x, id: i, date: `2026-0${i + 1}-01`, transaction_type: '', counterparty_account: null, counterparty_name: null, details: '' })));
+  assert.equal(core.length, 4);
+  assert.ok(core.every((c) => c.amount_cents >= 205000));
 });

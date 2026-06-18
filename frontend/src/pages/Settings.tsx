@@ -32,6 +32,7 @@ export default function Settings() {
   const txFileRef = useRef<HTMLInputElement>(null);
   const cfgFileRef = useRef<HTMLInputElement>(null);
   const budgetFileRef = useRef<HTMLInputElement>(null);
+  const acctFileRef = useRef<HTMLInputElement>(null);
 
   // accounts section
   const [accounts, setAccounts] = useState<KnownAccount[]>([]);
@@ -51,6 +52,10 @@ export default function Settings() {
   }
   async function exportConfig() {
     try { download('categories-rules.json', await api('/export/config')); }
+    catch (e) { setMsg(`Export failed: ${(e as Error).message}`); }
+  }
+  async function exportKnownAccounts() {
+    try { download('known-accounts.json', await api('/export/known-accounts')); }
     catch (e) { setMsg(`Export failed: ${(e as Error).message}`); }
   }
   async function exportBudgets() {
@@ -160,6 +165,9 @@ export default function Settings() {
                 <button onClick={exportConfig} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800">
                   Export categories &amp; rules
                 </button>
+                <button onClick={exportKnownAccounts} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800">
+                  Export known accounts
+                </button>
                 <button onClick={exportBudgets} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800">
                   Export budgets
                 </button>
@@ -176,6 +184,9 @@ export default function Settings() {
                 <button onClick={() => cfgFileRef.current?.click()} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800">
                   Import categories &amp; rules
                 </button>
+                <button onClick={() => acctFileRef.current?.click()} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800">
+                  Import known accounts
+                </button>
                 <button onClick={() => budgetFileRef.current?.click()} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800">
                   Import budgets
                 </button>
@@ -185,6 +196,8 @@ export default function Settings() {
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f, '/import/transactions', 'Imported'); e.target.value = ''; }} />
               <input ref={cfgFileRef} type="file" accept=".json" className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f, '/import/config', 'Imported'); e.target.value = ''; }} />
+              <input ref={acctFileRef} type="file" accept=".json" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f, '/import/known-accounts', 'Imported'); e.target.value = ''; }} />
               <input ref={budgetFileRef} type="file" accept=".json" className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f, '/import/budgets', 'Imported'); e.target.value = ''; }} />
             </section>

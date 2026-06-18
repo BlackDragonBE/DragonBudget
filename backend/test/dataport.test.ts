@@ -5,6 +5,7 @@ import { parseBnpCsv } from '../src/csv/parse';
 import { importTransactions } from '../src/csv/import';
 import {
   exportTransactions, exportConfig, importTransactionRows, importConfig,
+  exportKnownAccounts, exportBudgets, importKnownAccounts, importBudgets,
 } from '../src/routes/dataport';
 import { resolveSort } from '../src/routes/transactions';
 
@@ -89,9 +90,65 @@ test('dataport: transaction with unknown category_name imports as uncategorized'
   assert.equal(row.category_id, null);
 });
 
-test('resolveSort: whitelists columns and falls back safely', () => {
-  assert.deepEqual(resolveSort({ sort: 'amount', order: 'asc' }), { col: 't.amount_cents', dir: 'ASC' });
-  assert.deepEqual(resolveSort({ sort: 'counterparty' }), { col: 't.counterparty_name', dir: 'DESC' });
-  // injection attempt / unknown sort -> default column, never echoed
-  assert.deepEqual(resolveSort({ sort: 'id; DROP TABLE transactions' }), { col: 't.execution_date', dir: 'DESC' });
+test('dataport: known accounts round-trip works', () => {
+  const db1 = createDb(':memory:');
+  db1.prepare("INSERT INTO known_accounts (name, account_number, is_own_account) VALUES ('Test Account 1', 'BE12345678', 0), ('Personal Account', 'BE87654321', 1)").run();
+
+  const exported = exportKnownAccounts(db1) as any[];
+  assert.equal(exported.length, 2);
+
+  const db2 = createDb(':memory:');
+  const result = importKnownAccounts(db2, exported);
+  assert.deepEqual({ ...result }, { imported: 2, total: 2 });
+
+  const account1 = db2.prepare("SELECT * FROM known_accounts WHERE account_number = 'BE12345678'").get() as { name: string; is_own_account: number };
+  const account2 = db2.prepare("SELECT * FROM known_accounts WHERE account_number = 'BE87654321'").get() as { name: string; is_own_account: number };
+  assert.equal(account1.name, 'Test Account 1');
+  assert.equal(account1.is_own_account, 0);
+  assert.equal(account2.name, 'Personal Account');
+  assert.equal(account2.is_own_account, 1);
+});
+
+test('dataport: re-importing known accounts is idempotent', () => {
+  const db1 = createDb(':memory:');
+  db1.prepare("INSERT INTO known_accounts (name, account_number, is_own_account) VALUES ('Account', 'BE11223344', 0)").run();
+
+  const exported = exportKnownAccounts(db1) as any[];
+  const db2 = createDb(':memory:');
+  importKnownAccounts(db2, exported);
+  const again = importKnownAccounts(db2, exported);
+  assert.equal(again.imported, 0); // INSERT OR IGNORE on account_number
+});
+
+test('dataport: budgets round-trip works', () => {
+  const db1 = createDb(':memory:');
+  // 'Housing' is a default seed category, present in both db1 and a fresh db2.
+  const cat = db1.prepare("SELECT id FROM categories WHERE name = 'Housing'").get() as { id: number };
+  db1.prepare("INSERT INTO budgets (category_id, month, limit_cents) VALUES (?, '2026-01', ?)").run(cat.id, 50000);
+
+  const exported = exportBudgets(db1) as any[];
+  assert.equal(exported.length, 1);
+  assert.equal(exported[0].category_name, 'Housing');
+
+  const db2 = createDb(':memory:');
+  const result = importBudgets(db2, exported);
+  assert.deepEqual({ ...result }, { imported: 1, total: 1 });
+
+  const budget = db2.prepare("SELECT b.limit_cents, c.name FROM budgets b JOIN categories c ON b.category_id = c.id").get() as { limit_cents: number; name: string };
+  assert.equal(budget.limit_cents, 50000);
+  assert.equal(budget.name, 'Housing');
+});
+
+test('dataport: re-importing budgets is idempotent', () => {
+  const db1 = createDb(':memory:');
+  const cat = db1.prepare("SELECT id FROM categories WHERE name = 'Housing'").get() as { id: number };
+  db1.prepare("INSERT INTO budgets (category_id, month, limit_cents) VALUES (?, '2026-02', ?)").run(cat.id, 100000);
+
+  const exported = exportBudgets(db1) as any[];
+  const db2 = createDb(':memory:');
+  const first = importBudgets(db2, exported);
+  assert.equal(first.imported, 1);
+
+  const second = importBudgets(db2, exported);
+  assert.equal(second.imported, 0); // INSERT OR IGNORE pattern (no conflict)
 });

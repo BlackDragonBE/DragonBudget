@@ -42,6 +42,19 @@ export function amountsSimilar(amounts: number[], tol = 0.1): boolean {
   return abs.every((a) => Math.abs(a - m) <= tol * m);
 }
 
+// When a group mixes a core recurring amount with outliers (e.g. salary plus
+// holiday pay from the same IBAN), filter to the dominant-amount cluster:
+// items within ±tol of the median absolute amount. Returns the subset (in
+// original order) or [] if fewer than 2 survive.
+export function filterToMedianCluster(items: Txn[], tol = 0.25): Txn[] {
+  if (items.length < 2) return [];
+  const abs = items.map((i) => Math.abs(i.amount_cents));
+  const m = median(abs);
+  if (m === 0) return [];
+  const core = items.filter((_, i) => Math.abs(abs[i] - m) <= tol * m);
+  return core.length >= 2 ? core : [];
+}
+
 function addDays(iso: string, days: number): string {
   const d = new Date(Date.parse(iso));
   d.setUTCDate(d.getUTCDate() + days);
@@ -81,23 +94,35 @@ export function detectRecurring(db: DB): { detected: number } {
 
   let detected = 0;
   tx(db, () => {
-    for (const [key, items] of groups) {
+    for (const [key, _items] of groups) {
+      let items = _items;
       items.sort((a, b) => (a.date < b.date ? -1 : 1));
-      const dates = items.map((i) => i.date);
-      const amounts = items.map((i) => i.amount_cents);
-      const gaps = dayGaps(dates);
       const isDirectDebit = items.some((i) => isRecurringType(i.transaction_type));
 
       let frequency: Frequency;
       if (isDirectDebit) {
+        const gaps = dayGaps(items.map((i) => i.date));
         frequency = gaps.length ? inferFrequency(gaps) : 'monthly';
         if (frequency === 'irregular') frequency = 'monthly';
       } else {
         if (items.length < 2) continue;
+        const gaps = dayGaps(items.map((i) => i.date));
         frequency = inferFrequency(gaps);
-        if (frequency === 'irregular' || !amountsSimilar(amounts)) continue;
+        if (frequency === 'irregular' || !amountsSimilar(items.map((i) => i.amount_cents))) {
+          // Retry on a dominant-amount cluster: drops outliers (holiday pay,
+          // partial months) that mask a core recurring pattern.
+          const core = filterToMedianCluster(items);
+          if (core.length < 2) continue;
+          const coreGaps = dayGaps(core.map((i) => i.date));
+          frequency = inferFrequency(coreGaps);
+          if (frequency === 'irregular' || !amountsSimilar(core.map((i) => i.amount_cents))) continue;
+          items = core;
+        }
       }
 
+      const dates = items.map((i) => i.date);
+      const amounts = items.map((i) => i.amount_cents);
+      const gaps = dayGaps(dates);
       const last = dates[dates.length - 1];
       const expected = amounts[amounts.length - 1];
       const gapDays = gaps.length ? Math.round(median(gaps)) : 30;

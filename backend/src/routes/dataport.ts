@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { db } from '../db';
 import type { DB } from '../db';
+import { detectTransfers } from '../transfers';
 
 export const dataportRouter = Router();
 
@@ -25,6 +26,20 @@ export function exportConfig(db: DB) {
      FROM category_rules r JOIN categories c ON c.id = r.category_id`
   ).all();
   return { categories, rules };
+}
+
+/** All known accounts (name, number, is_own_account). */
+export function exportKnownAccounts(db: DB) {
+  return db.prepare('SELECT * FROM known_accounts ORDER BY is_own_account, name').all();
+}
+
+/** Budgets with category_name for portability. */
+export function exportBudgets(db: DB) {
+  return db.prepare(
+    `SELECT b.month, b.limit_cents, c.name AS category_name
+     FROM budgets b JOIN categories c ON c.id = b.category_id
+     ORDER BY b.month, c.name`
+  ).all();
 }
 
 /** Upsert transactions by import_hash (idempotent); resolve category by name. */
@@ -88,27 +103,31 @@ export function importConfig(db: DB, body: ConfigBodyT): { categoriesImported: n
   return { categoriesImported, rulesImported };
 }
 
-/** Budgets with category_name for portability. */
-export function exportBudgets(db: DB) {
-  return db.prepare(
-    `SELECT b.month, b.limit_cents, c.name AS category_name
-     FROM budgets b JOIN categories c ON c.id = b.category_id
-     ORDER BY b.month, c.name`
-  ).all();
-}
-
-/** Upsert budgets by category_name + month (idempotent). */
+/** Upsert budgets by category_name + month (idempotent — re-import skips existing). */
 export function importBudgets(db: DB, rows: BudgetRowT[]): { imported: number; total: number } {
-  const upsert = db.prepare(
-    `INSERT INTO budgets (category_id, month, limit_cents) VALUES (?,?,?)
-     ON CONFLICT(category_id, month) DO UPDATE SET limit_cents = excluded.limit_cents`
+  const insert = db.prepare(
+    `INSERT OR IGNORE INTO budgets (category_id, month, limit_cents) VALUES (?,?,?)`
   );
   let imported = 0;
   for (const row of rows) {
     const cat = db.prepare('SELECT id FROM categories WHERE name = ?').get(row.category_name) as { id: number } | undefined;
     if (!cat) continue;
-    upsert.run(cat.id, row.month, row.limit_cents);
-    imported++;
+    const r = insert.run(cat.id, row.month, row.limit_cents);
+    if (r.changes > 0) imported++;
+  }
+  return { imported, total: rows.length };
+}
+
+/** Upsert known accounts by account_number (idempotent). */
+export function importKnownAccounts(db: DB, rows: KnownAccountRowT[]): { imported: number; total: number } {
+  const upsert = db.prepare(
+    `INSERT OR IGNORE INTO known_accounts (name, account_number, is_own_account) VALUES (?,?,?)`
+  );
+  let imported = 0;
+  for (const row of rows) {
+    const normalized = row.account_number.replace(/\s+/g, '');
+    const r = upsert.run(row.name, normalized, row.is_own_account);
+    if (r.changes > 0) imported++;
   }
   return { imported, total: rows.length };
 }
@@ -117,6 +136,7 @@ export function importBudgets(db: DB, rows: BudgetRowT[]): { imported: number; t
 
 dataportRouter.get('/export/transactions', (_req, res) => res.json(exportTransactions(db)));
 dataportRouter.get('/export/config', (_req, res) => res.json(exportConfig(db)));
+dataportRouter.get('/export/known-accounts', (_req, res) => res.json(exportKnownAccounts(db)));
 dataportRouter.get('/export/budgets', (_req, res) => res.json(exportBudgets(db)));
 
 // POST /api/import/transactions — upserts by import_hash; resolves category by name
@@ -183,4 +203,28 @@ dataportRouter.post('/import/budgets', (req, res) => {
   const parsed = z.array(BudgetRow).safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   res.json(importBudgets(db, parsed.data));
+});
+
+const KnownAccountRow = z.object({
+  name: z.string(),
+  account_number: z.string(),
+  is_own_account: z.number().int().min(0).max(1),
+});
+type KnownAccountRowT = z.infer<typeof KnownAccountRow>;
+
+dataportRouter.post('/import/known-accounts', (req, res) => {
+  const parsed = KnownAccountRow.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  const normalized = parsed.data.account_number.replace(/\s+/g, '');
+  try {
+    const row = db.prepare(
+      'INSERT OR IGNORE INTO known_accounts (name, account_number, is_own_account) VALUES (?,?,?) RETURNING *'
+    ).get(parsed.data.name, normalized, parsed.data.is_own_account);
+    if (row) {
+      detectTransfers(db);
+    }
+    res.status(201).json(row || { error: 'Account number already exists' });
+  } catch {
+    res.status(409).json({ error: 'Account number already exists' });
+  }
 });
