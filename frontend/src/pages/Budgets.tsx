@@ -40,7 +40,7 @@ export default function Budgets() {
   }
 
   return (
-    <div className="max-w-5xl space-y-4">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xl font-semibold">Budgets</h2>
         <div className="flex gap-2">
@@ -95,12 +95,23 @@ export default function Budgets() {
         {/* Expenses — bottom on narrow, left on wide */}
         <div className="order-last min-w-0 flex-1 divide-y divide-slate-100 rounded border border-slate-200 bg-white lg:order-first dark:divide-slate-800 dark:border-slate-700 dark:bg-slate-900">
           <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-            <span className="flex-1">Category</span>
+            <span className="w-40 shrink-0">Category</span>
+            <span className="flex-1" />
             <span className="w-24 text-right">Spent</span>
             <span className="w-28 text-right">Monthly limit (€)</span>
           </div>
           <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 text-sm font-medium dark:bg-slate-800">
-            <span className="flex-1 text-slate-700 dark:text-slate-300">Total</span>
+            <span className="w-40 shrink-0 text-slate-700 dark:text-slate-300">Total</span>
+            <div className="flex flex-1 items-center gap-1.5">
+              <div className="h-2 flex-1 rounded-full bg-slate-200 dark:bg-slate-700">
+                {totalLimit > 0 && (
+                  <div
+                    className={`h-2 rounded-full ${totalSpent > totalLimit ? 'bg-red-500' : 'bg-emerald-500'}`}
+                    style={{ width: `${Math.min(100, (totalSpent / totalLimit) * 100)}%` }}
+                  />
+                )}
+              </div>
+            </div>
             <span className={`w-24 text-right ${totalSpent > totalLimit && totalLimit > 0 ? 'text-red-600' : 'text-slate-700'}`}>
               {euros(totalSpent)}
             </span>
@@ -110,9 +121,24 @@ export default function Budgets() {
             const row = byCat.get(c.id);
             const spent = Math.max(0, -(row?.spent_cents ?? 0));
             const over = row?.limit_cents != null && spent > row.limit_cents;
+            const rawPct = row?.limit_cents ? (spent / row.limit_cents) * 100 : 0;
+            const pct = Math.min(100, rawPct);
             return (
               <div key={c.id} className="flex items-center gap-2 px-3 py-2 text-sm">
-                <Link to={`/transactions?month=${month}&category_id=${c.id}&direction=expense`} className="flex-1 rounded hover:bg-slate-50 dark:hover:bg-slate-800">{c.icon} {c.name}</Link>
+                <Link to={`/transactions?month=${month}&category_id=${c.id}&direction=expense`} className="w-40 shrink-0 rounded hover:bg-slate-50 dark:hover:bg-slate-800">{c.icon} {c.name}</Link>
+                <div className="flex flex-1 items-center gap-1.5">
+                  <div className="h-2 flex-1 rounded-full bg-slate-200 dark:bg-slate-700">
+                    {row?.limit_cents ? (
+                      <div
+                        className={`h-2 rounded-full transition-all ${over ? 'bg-red-500' : 'bg-emerald-500'}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    ) : null}
+                  </div>
+                  {row?.limit_cents ? (
+                    <span className="w-12 text-right text-xs text-slate-400">{Math.round(rawPct)}%</span>
+                  ) : null}
+                </div>
                 <span className={`w-24 text-right ${over ? 'font-semibold text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'}`}>
                   {euros(spent)}
                 </span>
@@ -131,7 +157,8 @@ export default function Budgets() {
           })}
           {uncategorizedSpent > 0 && (
             <div className="flex items-center gap-2 px-3 py-2 text-sm">
-              <Link to={`/transactions?month=${month}&category_id=none`} className="flex-1 rounded text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800">Uncategorized</Link>
+              <Link to={`/transactions?month=${month}&category_id=none`} className="w-40 shrink-0 rounded text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800">Uncategorized</Link>
+              <span className="flex-1" />
               <span className="w-24 text-right text-slate-600 dark:text-slate-400">{euros(uncategorizedSpent)}</span>
               <span className="w-28" />
             </div>
