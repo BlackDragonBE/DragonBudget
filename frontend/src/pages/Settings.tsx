@@ -31,6 +31,7 @@ export default function Settings() {
   const [msg, setMsg] = useState('');
   const txFileRef = useRef<HTMLInputElement>(null);
   const cfgFileRef = useRef<HTMLInputElement>(null);
+  const budgetFileRef = useRef<HTMLInputElement>(null);
 
   // accounts section
   const [accounts, setAccounts] = useState<KnownAccount[]>([]);
@@ -52,6 +53,10 @@ export default function Settings() {
   }
   async function exportConfig() {
     try { download('categories-rules.json', await api('/export/config')); }
+    catch (e) { setMsg(`Export failed: ${(e as Error).message}`); }
+  }
+  async function exportBudgets() {
+    try { download('budgets.json', await api('/export/budgets')); }
     catch (e) { setMsg(`Export failed: ${(e as Error).message}`); }
   }
   async function importFile(file: File, endpoint: string, label: string) {
@@ -158,6 +163,9 @@ export default function Settings() {
                 <button onClick={exportConfig} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800">
                   Export categories &amp; rules
                 </button>
+                <button onClick={exportBudgets} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800">
+                  Export budgets
+                </button>
               </div>
               <p className="mt-2 text-xs text-slate-400">Downloads a JSON file you can use as a backup or to migrate to another instance.</p>
             </section>
@@ -171,12 +179,17 @@ export default function Settings() {
                 <button onClick={() => cfgFileRef.current?.click()} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800">
                   Import categories &amp; rules
                 </button>
+                <button onClick={() => budgetFileRef.current?.click()} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800">
+                  Import budgets
+                </button>
               </div>
               <p className="mt-2 text-xs text-slate-400">Existing data is preserved — duplicates are skipped.</p>
               <input ref={txFileRef} type="file" accept=".json" className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f, '/import/transactions', 'Imported'); e.target.value = ''; }} />
               <input ref={cfgFileRef} type="file" accept=".json" className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f, '/import/config', 'Imported'); e.target.value = ''; }} />
+              <input ref={budgetFileRef} type="file" accept=".json" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f, '/import/budgets', 'Imported'); e.target.value = ''; }} />
             </section>
           </>
         )}

@@ -88,10 +88,36 @@ export function importConfig(db: DB, body: ConfigBodyT): { categoriesImported: n
   return { categoriesImported, rulesImported };
 }
 
+/** Budgets with category_name for portability. */
+export function exportBudgets(db: DB) {
+  return db.prepare(
+    `SELECT b.month, b.limit_cents, c.name AS category_name
+     FROM budgets b JOIN categories c ON c.id = b.category_id
+     ORDER BY b.month, c.name`
+  ).all();
+}
+
+/** Upsert budgets by category_name + month (idempotent). */
+export function importBudgets(db: DB, rows: BudgetRowT[]): { imported: number; total: number } {
+  const upsert = db.prepare(
+    `INSERT INTO budgets (category_id, month, limit_cents) VALUES (?,?,?)
+     ON CONFLICT(category_id, month) DO UPDATE SET limit_cents = excluded.limit_cents`
+  );
+  let imported = 0;
+  for (const row of rows) {
+    const cat = db.prepare('SELECT id FROM categories WHERE name = ?').get(row.category_name) as { id: number } | undefined;
+    if (!cat) continue;
+    upsert.run(cat.id, row.month, row.limit_cents);
+    imported++;
+  }
+  return { imported, total: rows.length };
+}
+
 // --- Routes ---
 
 dataportRouter.get('/export/transactions', (_req, res) => res.json(exportTransactions(db)));
 dataportRouter.get('/export/config', (_req, res) => res.json(exportConfig(db)));
+dataportRouter.get('/export/budgets', (_req, res) => res.json(exportBudgets(db)));
 
 // POST /api/import/transactions — upserts by import_hash; resolves category by name
 const TxRow = z.object({
@@ -144,4 +170,17 @@ dataportRouter.post('/import/config', (req, res) => {
   const parsed = ConfigBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   res.json(importConfig(db, parsed.data));
+});
+
+const BudgetRow = z.object({
+  category_name: z.string(),
+  month: z.string().regex(/^\d{4}-\d{2}$/),
+  limit_cents: z.number().int().min(0),
+});
+type BudgetRowT = z.infer<typeof BudgetRow>;
+
+dataportRouter.post('/import/budgets', (req, res) => {
+  const parsed = z.array(BudgetRow).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  res.json(importBudgets(db, parsed.data));
 });
