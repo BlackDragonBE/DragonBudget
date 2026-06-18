@@ -6,17 +6,34 @@ import { useCategories } from '../useCategories';
 import type { Tx, TxPage } from '../types';
 import { TxDetailModal } from '../components/TxDetailModal';
 
+const SS_KEY = 'tx_filters';
+
+function loadFilters(sp: URLSearchParams) {
+  const saved = (() => { try { return JSON.parse(sessionStorage.getItem(SS_KEY) ?? 'null'); } catch { return null; } })();
+  return {
+    q:         sp.get('q')          ?? saved?.q         ?? '',
+    month:     sp.get('month')      ?? saved?.month      ?? '',
+    status:    sp.get('status')     ?? saved?.status     ?? '',
+    category:  sp.get('category_id')?? saved?.category   ?? '',
+    direction: sp.get('direction')  ?? saved?.direction  ?? '',
+    sort:      saved?.sort  ?? 'date',
+    order:     saved?.order ?? 'desc',
+    page:      saved?.page  ?? 1,
+  };
+}
+
 export default function Transactions() {
   const { categories } = useCategories();
   const [sp] = useSearchParams();
-  const [q, setQ] = useState(() => sp.get('q') ?? '');
-  const [month, setMonth] = useState(() => sp.get('month') ?? '');
-  const [status, setStatus] = useState(() => sp.get('status') ?? '');
-  const [category, setCategory] = useState(() => sp.get('category_id') ?? '');
-  const [direction] = useState(() => sp.get('direction') ?? '');
-  const [sort, setSort] = useState('date');
-  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
-  const [page, setPage] = useState(1);
+  const init = loadFilters(sp);
+  const [q, setQ] = useState(init.q);
+  const [month, setMonth] = useState(init.month);
+  const [status, setStatus] = useState(init.status);
+  const [category, setCategory] = useState(init.category);
+  const [direction] = useState(init.direction);
+  const [sort, setSort] = useState(init.sort);
+  const [order, setOrder] = useState<'asc' | 'desc'>(init.order);
+  const [page, setPage] = useState<number>(init.page);
   const [data, setData] = useState<TxPage | null>(null);
   const [error, setError] = useState('');
   const [selectedTx, setSelectedTx] = useState<Tx | null>(null);
@@ -25,6 +42,10 @@ export default function Transactions() {
     fn();
     setPage(1);
   }
+
+  useEffect(() => {
+    sessionStorage.setItem(SS_KEY, JSON.stringify({ q, month, status, category, direction, sort, order, page }));
+  }, [q, month, status, category, direction, sort, order, page]);
 
   useEffect(() => {
     const params = new URLSearchParams();
