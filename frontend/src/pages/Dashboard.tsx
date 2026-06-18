@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { euros } from '../format';
 import { useCategories } from '../useCategories';
-import type { MonthReport } from '../types';
+import type { MonthReport, Tx } from '../types';
+import { TxDetailModal } from '../components/TxDetailModal';
 
 const thisMonth = () => new Date().toISOString().slice(0, 7);
 
@@ -11,6 +12,7 @@ export default function Dashboard() {
   const { categories } = useCategories();
   const [month, setMonth] = useState(() => localStorage.getItem('dashboard-month') ?? thisMonth());
   const [report, setReport] = useState<MonthReport | null>(null);
+  const [selectedTx, setSelectedTx] = useState<Tx | null>(null);
 
   const load = () => api<MonthReport>(`/reports/month?month=${month}`).then(setReport);
   useEffect(() => { load(); }, [month]);
@@ -123,8 +125,14 @@ export default function Dashboard() {
         <div className="divide-y divide-slate-100">
           {report?.uncategorized.map((t) => (
             <div key={t.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
-              <span className="w-24 shrink-0 text-slate-400">{t.execution_date}</span>
-              <span className="min-w-40 flex-1 truncate">{t.counterparty_name || t.details}</span>
+              <button
+                onClick={() => setSelectedTx(t)}
+                className="w-24 shrink-0 text-left text-slate-400 hover:text-slate-700"
+              >{t.execution_date}</button>
+              <button
+                onClick={() => setSelectedTx(t)}
+                className="min-w-40 flex-1 truncate text-left hover:text-slate-600"
+              >{t.counterparty_name || t.details}</button>
               <span className="w-24 text-right font-medium">{euros(t.amount_cents)}</span>
               <select
                 defaultValue=""
@@ -140,6 +148,7 @@ export default function Dashboard() {
           ))}
         </div>
       </section>
+      {selectedTx && <TxDetailModal tx={selectedTx} onClose={() => setSelectedTx(null)} />}
     </div>
   );
 }
