@@ -5,6 +5,7 @@ export interface Category {
   color: string | null;
   is_income: number;
   archived: number;
+  txn_count: number;
 }
 
 export interface Rule {

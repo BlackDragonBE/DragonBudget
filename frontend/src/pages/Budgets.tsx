@@ -7,7 +7,7 @@ import type { MonthReport } from '../types';
 
 export default function Budgets() {
   const { categories } = useCategories();
-  const [month, setMonth] = useState(thisMonth());
+  const [month, setMonth] = useState(() => localStorage.getItem('budgets-month') ?? thisMonth());
   const [report, setReport] = useState<MonthReport | null>(null);
   const [msg, setMsg] = useState('');
 
@@ -19,9 +19,10 @@ export default function Budgets() {
   const expenseCategories = categories.filter((c) => !c.is_income);
   const incomeCategories = categories.filter((c) => (byCat.get(c.id)?.spent_cents ?? 0) > 0);
   const totalLimit = expenseCategories.reduce((sum, c) => sum + (byCat.get(c.id)?.limit_cents ?? 0), 0);
-  const totalSpent = expenseCategories.reduce((sum, c) => sum + Math.abs(byCat.get(c.id)?.spent_cents ?? 0), 0);
+  const totalSpent = expenseCategories.reduce((sum, c) => sum + Math.max(0, -(byCat.get(c.id)?.spent_cents ?? 0)), 0);
   const totalIncomeLimit = incomeCategories.reduce((sum, c) => sum + (byCat.get(c.id)?.limit_cents ?? 0), 0);
   const totalIncome = incomeCategories.reduce((sum, c) => sum + (byCat.get(c.id)?.spent_cents ?? 0), 0);
+  const uncategorizedSpent = (report?.uncategorized ?? []).reduce((sum, t) => sum + Math.max(0, -t.amount_cents), 0);
 
   async function setLimit(categoryId: number, euroStr: string) {
     const limit_cents = Math.round((parseFloat(euroStr.replace(',', '.')) || 0) * 100);
@@ -49,7 +50,7 @@ export default function Budgets() {
           <input
             type="month"
             value={month}
-            onChange={(e) => setMonth(e.target.value)}
+            onChange={(e) => { setMonth(e.target.value); localStorage.setItem('budgets-month', e.target.value); }}
             className="rounded border border-slate-300 px-3 py-1.5 text-sm"
           />
         </div>
@@ -107,7 +108,7 @@ export default function Budgets() {
           </div>
           {expenseCategories.map((c) => {
             const row = byCat.get(c.id);
-            const spent = Math.abs(row?.spent_cents ?? 0);
+            const spent = Math.max(0, -(row?.spent_cents ?? 0));
             const over = row?.limit_cents != null && spent > row.limit_cents;
             return (
               <div key={c.id} className="flex items-center gap-2 px-3 py-2 text-sm">
@@ -128,6 +129,13 @@ export default function Budgets() {
               </div>
             );
           })}
+          {uncategorizedSpent > 0 && (
+            <div className="flex items-center gap-2 px-3 py-2 text-sm">
+              <Link to={`/transactions?month=${month}&category_id=none`} className="flex-1 rounded text-slate-400 hover:bg-slate-50">Uncategorized</Link>
+              <span className="w-24 text-right text-slate-600">{euros(uncategorizedSpent)}</span>
+              <span className="w-28" />
+            </div>
+          )}
         </div>
       </div>
     </div>

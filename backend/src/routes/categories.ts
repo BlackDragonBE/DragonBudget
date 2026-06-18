@@ -18,7 +18,14 @@ const getCategory = (id: number) => db.prepare('SELECT * FROM categories WHERE i
 categoriesRouter.get('/', (req, res) => {
   const all = req.query.include_archived === '1';
   res.json(
-    db.prepare(`SELECT * FROM categories ${all ? '' : 'WHERE archived = 0'} ORDER BY archived, is_income DESC, name`).all(),
+    db.prepare(`
+      SELECT c.*, COUNT(t.id) AS txn_count
+      FROM categories c
+      LEFT JOIN transactions t ON t.category_id = c.id AND t.status = 'accepted'
+      ${all ? '' : 'WHERE c.archived = 0'}
+      GROUP BY c.id
+      ORDER BY c.archived, c.is_income DESC, c.name
+    `).all(),
   );
 });
 

@@ -111,9 +111,9 @@ export function balanceHistory(
 }
 
 // Per-category spending per month (DESIGN.md §7.2), pivoted for a stacked chart:
-// rows are { month, <CategoryName>: absCents }. Expense categories only.
-export function categoryTrends(db: DB, opts: { from?: string; to?: string } = {}) {
-  const where = ["t.status = 'accepted'", 'c.is_income = 0', 't.execution_date IS NOT NULL'];
+// rows are { month, <CategoryName>: absCents }. isIncome=true flips to income categories.
+export function categoryTrends(db: DB, opts: { from?: string; to?: string; isIncome?: boolean } = {}) {
+  const where = ["t.status = 'accepted'", `c.is_income = ${opts.isIncome ? 1 : 0}`, 't.execution_date IS NOT NULL'];
   const params: string[] = [];
   if (opts.from) { where.push("substr(t.execution_date,1,7) >= ?"); params.push(opts.from); }
   if (opts.to) { where.push("substr(t.execution_date,1,7) <= ?"); params.push(opts.to); }

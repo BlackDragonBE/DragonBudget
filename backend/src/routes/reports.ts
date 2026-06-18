@@ -34,10 +34,10 @@ reportsRouter.get('/balance-history', (req, res) => {
   }));
 });
 
-// GET /api/reports/category-trends?from=YYYY-MM&to=YYYY-MM
+// GET /api/reports/category-trends?from=YYYY-MM&to=YYYY-MM[&income=1]
 reportsRouter.get('/category-trends', (req, res) => {
   const from = optParam(req.query.from, MONTH);
   const to = optParam(req.query.to, MONTH);
   if (!from.ok || !to.ok) return res.status(400).json({ error: 'from/to must be YYYY-MM' });
-  res.json(categoryTrends(db, { from: from.value, to: to.value }));
+  res.json(categoryTrends(db, { from: from.value, to: to.value, isIncome: req.query.income === '1' }));
 });

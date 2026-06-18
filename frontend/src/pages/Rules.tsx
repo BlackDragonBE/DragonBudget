@@ -20,6 +20,7 @@ export default function Rules() {
   const { categories } = useCategories();
   const [rules, setRules] = useState<Rule[]>([]);
   const [suggestions, setSuggestions] = useState<RuleSuggestion[]>([]);
+  const [search, setSearch] = useState('');
   const [applyMsg, setApplyMsg] = useState('');
   const [previewSuggId, setPreviewSuggId] = useState<number | null>(null);
   const [selectedTx, setSelectedTx] = useState<Tx | null>(null);
@@ -102,12 +103,30 @@ export default function Rules() {
 
       <NewRuleForm categories={categories} onCreated={reload} onOpenTx={openTx} />
 
-      <div className="divide-y divide-slate-100 rounded border border-slate-200 bg-white">
-        {rules.length === 0 && <p className="px-3 py-6 text-center text-sm text-slate-400">No rules yet.</p>}
-        {rules.map((r) => (
-          <RuleRow key={r.id} rule={r} categories={categories} onChange={reload} onOpenTx={openTx} />
-        ))}
-      </div>
+      <input
+        type="search"
+        placeholder="Search rules…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="w-full rounded border border-slate-300 px-3 py-1.5 text-sm"
+      />
+
+      {(() => {
+        const q = search.toLowerCase();
+        const visible = q ? rules.filter((r) => r.match_value.toLowerCase().includes(q) || r.category_name.toLowerCase().includes(q)) : rules;
+        return (
+          <div className="divide-y divide-slate-100 rounded border border-slate-200 bg-white">
+            {visible.length === 0 && (
+              <p className="px-3 py-6 text-center text-sm text-slate-400">
+                {rules.length === 0 ? 'No rules yet.' : `No rules match "${search}".`}
+              </p>
+            )}
+            {visible.map((r) => (
+              <RuleRow key={r.id} rule={r} categories={categories} onChange={reload} onOpenTx={openTx} />
+            ))}
+          </div>
+        );
+      })()}
 
       {selectedTx && <TxDetailModal tx={selectedTx} onClose={() => setSelectedTx(null)} />}
     </div>

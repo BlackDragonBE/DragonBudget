@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useCategories } from '../useCategories';
 import type { Category } from '../types';
@@ -85,6 +86,12 @@ function CategoryRow({ category, onChange }: { category: Category; onChange: () 
         <input type="checkbox" defaultChecked={!!category.is_income} onChange={(e) => patch({ is_income: e.target.checked })} />
         income
       </label>
+      <Link
+        to={`/transactions?category_id=${category.id}`}
+        className="w-28 rounded border border-slate-300 px-2 py-1 text-center text-xs text-slate-600 hover:bg-slate-50"
+      >
+        {category.txn_count} transaction{category.txn_count !== 1 ? 's' : ''}
+      </Link>
       <button
         onClick={() => patch({ archived: !archived })}
         className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"

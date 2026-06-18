@@ -34,6 +34,7 @@ export default function AllTime() {
   const [currentEuros, setCurrentEuros] = useState(() => localStorage.getItem('currentBalance') ?? '0');
   const [balance, setBalance] = useState<BalancePoint[]>([]);
   const [trends, setTrends] = useState<CategoryTrends>({ categories: [], data: [] });
+  const [incomeTrends, setIncomeTrends] = useState<CategoryTrends>({ categories: [], data: [] });
 
   useEffect(() => {
     const { fromDate, toDate } = rangeFor(preset);
@@ -45,6 +46,7 @@ export default function AllTime() {
     const tp = new URLSearchParams({ to: toDate.slice(0, 7) });
     if (fromDate) tp.set('from', fromDate.slice(0, 7));
     api<CategoryTrends>(`/reports/category-trends?${tp}`).then(setTrends);
+    api<CategoryTrends>(`/reports/category-trends?${tp}&income=1`).then(setIncomeTrends);
   }, [preset, currentEuros]);
 
   return (
@@ -96,6 +98,28 @@ export default function AllTime() {
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 {trends.categories.map((c, i) => (
                   <Bar key={c.id} dataKey={c.name} stackId="spend" fill={c.color ?? PALETTE[i % PALETTE.length]} />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </section>
+
+      <section className="rounded border border-slate-200 bg-white p-4">
+        <h3 className="mb-3 text-sm font-medium text-slate-600">Income by category per month</h3>
+        {incomeTrends.data.length === 0 ? (
+          <p className="text-sm text-slate-400">No income in this range.</p>
+        ) : (
+          <div className="h-80 w-full">
+            <ResponsiveContainer>
+              <BarChart data={incomeTrends.data} margin={{ top: 5, right: 10, bottom: 5, left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={eurTick} width={60} />
+                <Tooltip formatter={(v: number) => euros(v)} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                {incomeTrends.categories.map((c, i) => (
+                  <Bar key={c.id} dataKey={c.name} stackId="income" fill={c.color ?? PALETTE[i % PALETTE.length]} />
                 ))}
               </BarChart>
             </ResponsiveContainer>
