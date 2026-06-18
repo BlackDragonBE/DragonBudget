@@ -17,4 +17,6 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     command: --interval 300 --cleanup
+    environment:
+      - DOCKER_API_VERSION=1.40
     restart: unless-stopped
