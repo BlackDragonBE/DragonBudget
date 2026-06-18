@@ -81,6 +81,10 @@ categoriesRouter.delete('/:id', (req, res) => {
   if (txn_count > 0) {
     return res.status(409).json({ error: `Cannot delete: ${txn_count} transaction(s) use this category. Archive it instead.` });
   }
+  db.prepare('DELETE FROM category_rules WHERE category_id = ?').run(id);
+  db.prepare('DELETE FROM budgets WHERE category_id = ?').run(id);
+  db.prepare('DELETE FROM rule_suggestions WHERE category_id = ?').run(id);
+  db.prepare('UPDATE recurring_expenses SET category_id = NULL WHERE category_id = ?').run(id);
   db.prepare('DELETE FROM categories WHERE id = ?').run(id);
   res.status(204).end();
 });
