@@ -21,7 +21,7 @@ cd frontend && npm install && npm run dev
 cd frontend && npm run build         # tsc --noEmit (typecheck) + vite build
 
 # Production: one container serves built frontend + API
-APP_PASSWORD=… SESSION_SECRET=$(openssl rand -hex 32) docker compose up -d --build
+APP_PASSWORD=… SESSION_SECRET=$(openssl rand -hex 32) docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 There is no lint step and no frontend test runner — `tsc` is the typecheck for both
