@@ -21,6 +21,16 @@ Clicking a category name opens the Transactions page filtered to that category a
 
 Income categories show actual received amount. If you set an expected amount in Budgets, a smaller bar shows progress toward that target.
 
+### Upcoming this month
+
+A cash-flow forecast built from your [recurring expenses](/recurring). It lists the recurring charges still expected before the end of the selected month — each with its expected date, category, and amount (income in green, expenses with a minus). A charge drops off this list automatically once a matching transaction for the month is imported, so it always reflects what's *still* coming.
+
+Below the list, two figures help you plan ahead:
+- **Still expected** — the totals yet to land this month, split into money out and money in.
+- **Projected month net** — this month's net so far plus everything still expected (red if you're heading for a negative month).
+
+Charges whose "Next expected" date has already passed but haven't been matched yet still appear here, so a not-yet-imported bill won't surprise you. Dismissed recurring entries are never included. The forecast shows each recurring charge once; weekly items that recur several times in a month are counted a single time.
+
 ### Uncategorized transactions
 
 A widget at the bottom lists all uncategorized transactions for the current month. Use the inline dropdown to categorize them without leaving the Dashboard. Once categorized, they disappear from this list.

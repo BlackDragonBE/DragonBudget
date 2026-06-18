@@ -135,6 +135,40 @@ export function balanceHistory(
   return daily.map((d) => ({ date: d.date, balance_cents: (bal += d.delta) }));
 }
 
+// Recurring charges still expected in `month` (roadmap 1.2): rows due on/before
+// month-end that have NOT already been matched by a transaction this month. Uses the
+// join table for "already happened" rather than next_expected_date (which only advances
+// on import, so it goes stale between imports). expected_amount_cents is signed, so the
+// income/expense split falls out of its sign. Dismissed recurring are excluded.
+export function upcomingRecurring(db: DB, month: string) {
+  const toDate = `${month}-31`; // lexical compare vs YYYY-MM-DD; covers every real day
+  const rows = db
+    .prepare(`
+      SELECT r.id, r.label, r.expected_amount_cents, r.frequency, r.next_expected_date,
+             c.name AS category_name, c.icon AS category_icon, c.color AS category_color
+      FROM recurring_expenses r
+      LEFT JOIN categories c ON c.id = r.category_id
+      WHERE r.status != 'dismissed'
+        AND r.next_expected_date IS NOT NULL
+        AND r.next_expected_date <= ?
+        AND NOT EXISTS (
+          SELECT 1 FROM recurring_expense_transactions ret
+          JOIN transactions t ON t.id = ret.transaction_id
+          WHERE ret.recurring_expense_id = r.id
+            AND t.status = 'accepted'
+            AND substr(t.execution_date, 1, 7) = ?
+        )
+      ORDER BY r.next_expected_date`)
+    .all(toDate, month) as { expected_amount_cents: number }[];
+
+  let expected_income_cents = 0, expected_expense_cents = 0;
+  for (const r of rows) {
+    if (r.expected_amount_cents > 0) expected_income_cents += r.expected_amount_cents;
+    else expected_expense_cents += r.expected_amount_cents;
+  }
+  return { month, upcoming: rows, expected_income_cents, expected_expense_cents };
+}
+
 // Per-category spending per month (DESIGN.md §7.2), pivoted for a stacked chart:
 // rows are { month, <CategoryName>: absCents }. isIncome=true flips to income categories.
 export function categoryTrends(db: DB, opts: { from?: string; to?: string; isIncome?: boolean } = {}) {

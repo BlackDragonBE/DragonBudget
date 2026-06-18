@@ -97,6 +97,24 @@ export interface MonthReport {
   uncategorized: Tx[];
 }
 
+export interface UpcomingCharge {
+  id: number;
+  label: string;
+  expected_amount_cents: number;
+  frequency: 'weekly' | 'monthly' | 'yearly' | 'irregular';
+  next_expected_date: string | null;
+  category_name: string | null;
+  category_icon: string | null;
+  category_color: string | null;
+}
+
+export interface UpcomingForecast {
+  month: string;
+  upcoming: UpcomingCharge[];
+  expected_income_cents: number;
+  expected_expense_cents: number;
+}
+
 export interface BalancePoint {
   date: string;
   balance_cents: number;

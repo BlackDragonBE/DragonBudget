@@ -65,8 +65,13 @@ priority (first match wins) and **never overwrites `category_source='manual'`** 
 a manual categorization reveals a repeated token.
 
 **Reports are pure query functions** in `reports.ts` (month / balance-history /
-category-trends), wrapped by thin handlers in `routes/reports.ts`. Recurring detection
-lives in `recurring/detect.ts`.
+category-trends / upcoming-recurring), wrapped by thin handlers in `routes/reports.ts`.
+Recurring detection lives in `recurring/detect.ts`. The cash-flow forecast
+(`upcomingRecurring`) is a reports query, not detection — it reads `recurring_expenses`
+rows due by month-end whose charge isn't yet matched in that month (`NOT EXISTS` on the
+`recurring_expense_transactions` join table, deliberately *not* `next_expected_date`,
+which only advances on import and goes stale). `expected_amount_cents` is signed, so the
+income/expense split falls out of its sign.
 
 **Sinking funds (rollover).** Categories have a `rollover` boolean (default off). When
 on, `monthReport` calls `carryover(db, categoryId, month)` — a pure function that sums
