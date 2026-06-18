@@ -16,6 +16,8 @@ export default function Budgets() {
   // category_id -> { spent_cents, limit_cents }
   const byCat = new Map(report?.categories.map((c) => [c.category_id, c]) ?? []);
   const expenseCategories = categories.filter((c) => !c.is_income);
+  const totalLimit = expenseCategories.reduce((sum, c) => sum + (byCat.get(c.id)?.limit_cents ?? 0), 0);
+  const totalSpent = expenseCategories.reduce((sum, c) => sum + Math.abs(byCat.get(c.id)?.spent_cents ?? 0), 0);
 
   async function setLimit(categoryId: number, euroStr: string) {
     const limit_cents = Math.round((parseFloat(euroStr.replace(',', '.')) || 0) * 100);
@@ -55,6 +57,13 @@ export default function Budgets() {
           <span className="flex-1">Category</span>
           <span className="w-24 text-right">Spent</span>
           <span className="w-28 text-right">Monthly limit (€)</span>
+        </div>
+        <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 text-sm font-medium">
+          <span className="flex-1 text-slate-700">Total</span>
+          <span className={`w-24 text-right ${totalSpent > totalLimit && totalLimit > 0 ? 'text-red-600' : 'text-slate-700'}`}>
+            {euros(totalSpent)}
+          </span>
+          <span className="w-28 text-right text-slate-700">{totalLimit > 0 ? euros(totalLimit) : '—'}</span>
         </div>
         {expenseCategories.map((c) => {
           const row = byCat.get(c.id);
