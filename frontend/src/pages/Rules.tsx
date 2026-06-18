@@ -2,7 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { api } from '../api';
 import { euros, shortDate } from '../format';
 import { useCategories } from '../useCategories';
-import type { Category, Rule, RulePreview, RuleSuggestion } from '../types';
+import type { Category, Rule, RulePreview, RuleSuggestion, Tx } from '../types';
+import { TxDetailModal } from '../components/TxDetailModal';
 
 const FIELDS = [
   { v: 'details', label: 'Details' },
@@ -20,6 +21,9 @@ export default function Rules() {
   const [rules, setRules] = useState<Rule[]>([]);
   const [suggestions, setSuggestions] = useState<RuleSuggestion[]>([]);
   const [applyMsg, setApplyMsg] = useState('');
+  const [previewSuggId, setPreviewSuggId] = useState<number | null>(null);
+  const [selectedTx, setSelectedTx] = useState<Tx | null>(null);
+  const openTx = (id: number) => api<Tx>(`/transactions/${id}`).then(setSelectedTx);
 
   const reload = () => api<Rule[]>('/rules').then(setRules);
   const reloadSuggestions = () => api<RuleSuggestion[]>('/rules/suggestions').then(setSuggestions);
@@ -54,38 +58,63 @@ export default function Rules() {
         <div className="space-y-2 rounded border border-blue-200 bg-blue-50 p-4">
           <h3 className="text-sm font-medium text-blue-800">Suggested rules</h3>
           {suggestions.map((s) => (
-            <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded bg-white px-3 py-2 text-sm">
-              <span>
-                Transactions containing <span className="font-medium">“{s.token}”</span> →{' '}
-                <span>{s.category_icon} {s.category_name}</span>{' '}
-                <span className="text-slate-400">({s.match_count} uncategorized match)</span>
-              </span>
-              <span className="flex gap-2">
-                <button onClick={() => accept(s.id)} className="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white">
-                  Accept
-                </button>
-                <button onClick={() => dismiss(s.id)} className="rounded border border-slate-300 px-3 py-1 text-xs hover:bg-slate-50">
-                  Dismiss
-                </button>
-              </span>
+            <div key={s.id} className="rounded bg-white px-3 py-2 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  Transactions containing <span className="font-medium">"{s.token}"</span> →{' '}
+                  <span>{s.category_icon} {s.category_name}</span>{' '}
+                  <span className="text-slate-400">({s.match_count} uncategorized match)</span>
+                </span>
+                <span className="flex gap-2">
+                  <button
+                    onClick={() => setPreviewSuggId(previewSuggId === s.id ? null : s.id)}
+                    className="rounded border border-slate-300 px-3 py-1 text-xs hover:bg-slate-50"
+                  >
+                    {previewSuggId === s.id ? 'Hide' : 'Preview'}
+                  </button>
+                  <button onClick={() => accept(s.id)} className="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white">
+                    Accept
+                  </button>
+                  <button onClick={() => dismiss(s.id)} className="rounded border border-slate-300 px-3 py-1 text-xs hover:bg-slate-50">
+                    Dismiss
+                  </button>
+                </span>
+              </div>
+              {previewSuggId === s.id && s.sample.length > 0 && (
+                <ul className="mt-2 space-y-1 border-t border-slate-100 pt-2">
+                  {s.sample.map((t) => (
+                    <li key={t.id} onClick={() => openTx(t.id)} className="flex cursor-pointer justify-between gap-2 rounded px-1 text-xs hover:bg-slate-50">
+                      <span className="truncate text-slate-500">
+                        {shortDate(t.execution_date)} · {t.counterparty_name || t.details.slice(0, 50)}
+                      </span>
+                      <span className="whitespace-nowrap">{euros(t.amount_cents)}</span>
+                    </li>
+                  ))}
+                  {s.match_count > s.sample.length && (
+                    <li className="text-xs text-slate-400">…and {s.match_count - s.sample.length} more</li>
+                  )}
+                </ul>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      <NewRuleForm categories={categories} onCreated={reload} />
+      <NewRuleForm categories={categories} onCreated={reload} onOpenTx={openTx} />
 
       <div className="divide-y divide-slate-100 rounded border border-slate-200 bg-white">
         {rules.length === 0 && <p className="px-3 py-6 text-center text-sm text-slate-400">No rules yet.</p>}
         {rules.map((r) => (
-          <RuleRow key={r.id} rule={r} categories={categories} onChange={reload} />
+          <RuleRow key={r.id} rule={r} categories={categories} onChange={reload} onOpenTx={openTx} />
         ))}
       </div>
+
+      {selectedTx && <TxDetailModal tx={selectedTx} onClose={() => setSelectedTx(null)} />}
     </div>
   );
 }
 
-function NewRuleForm({ categories, onCreated }: { categories: Category[]; onCreated: () => void }) {
+function NewRuleForm({ categories, onCreated, onOpenTx }: { categories: Category[]; onCreated: () => void; onOpenTx: (id: number) => void }) {
   const [categoryId, setCategoryId] = useState('');
   const [field, setField] = useState('details');
   const [type, setType] = useState('contains');
@@ -177,7 +206,7 @@ function NewRuleForm({ categories, onCreated }: { categories: Category[]; onCrea
           <p className="mb-2 font-medium">{preview.total} existing transaction(s) would match:</p>
           <ul className="space-y-1">
             {preview.sample.slice(0, 8).map((t) => (
-              <li key={t.id} className="flex justify-between gap-2">
+              <li key={t.id} onClick={() => onOpenTx(t.id)} className="flex cursor-pointer justify-between gap-2 rounded px-1 hover:bg-slate-100">
                 <span className="truncate text-slate-500">
                   {shortDate(t.execution_date)} · {t.counterparty_name || t.details.slice(0, 50)}
                 </span>
@@ -192,7 +221,7 @@ function NewRuleForm({ categories, onCreated }: { categories: Category[]; onCrea
   );
 }
 
-function RuleRow({ rule, categories, onChange }: { rule: Rule; categories: Category[]; onChange: () => void }) {
+function RuleRow({ rule, categories, onChange, onOpenTx }: { rule: Rule; categories: Category[]; onChange: () => void; onOpenTx: (id: number) => void }) {
   const [editing, setEditing] = useState(false);
   const [field, setField] = useState(rule.match_field as string);
   const [type, setType] = useState(rule.match_type as string);
@@ -322,7 +351,7 @@ function RuleRow({ rule, categories, onChange }: { rule: Rule; categories: Categ
             <p className="mb-2 font-medium">{preview.total} existing transaction(s) would match:</p>
             <ul className="space-y-1">
               {preview.sample.slice(0, 8).map((t) => (
-                <li key={t.id} className="flex justify-between gap-2">
+                <li key={t.id} onClick={() => onOpenTx(t.id)} className="flex cursor-pointer justify-between gap-2 rounded px-1 hover:bg-slate-100">
                   <span className="truncate text-slate-500">
                     {shortDate(t.execution_date)} · {t.counterparty_name || t.details.slice(0, 50)}
                   </span>
@@ -342,7 +371,7 @@ function RuleRow({ rule, categories, onChange }: { rule: Rule; categories: Categ
       <span className="font-mono text-xs text-slate-500">P{rule.priority}</span>
       <span className="flex-1">
         <span className="text-slate-500">{rule.match_field} {rule.match_type}</span>{' '}
-        <span className="font-medium">“{rule.match_value}”</span>{' '}
+        <span className="font-medium">"{rule.match_value}"</span>{' '}
         <span className="text-slate-400">→</span>{' '}
         <span>{rule.category_icon} {rule.category_name}</span>
         {!!rule.created_from_suggestion && (

@@ -67,6 +67,13 @@ transactionsRouter.delete('/', (_req, res) => {
   res.json({ ok: true });
 });
 
+// GET /api/transactions/:id
+transactionsRouter.get('/:id', (req, res) => {
+  const tx = getTx(Number(req.params.id));
+  if (!tx) return res.status(404).json({ error: 'not found' });
+  res.json(tx);
+});
+
 // PATCH /api/transactions/:id { category_id: number | null } — manual categorize.
 // Always sets category_source='manual' (rules never overwrite this; §5.1/§5.3).
 const PatchTx = z.object({ category_id: z.number().int().nullable() });

@@ -9,7 +9,7 @@ const thisMonth = () => new Date().toISOString().slice(0, 7);
 
 export default function Dashboard() {
   const { categories } = useCategories();
-  const [month, setMonth] = useState(thisMonth());
+  const [month, setMonth] = useState(() => localStorage.getItem('dashboard-month') ?? thisMonth());
   const [report, setReport] = useState<MonthReport | null>(null);
 
   const load = () => api<MonthReport>(`/reports/month?month=${month}`).then(setReport);
@@ -32,7 +32,7 @@ export default function Dashboard() {
         <input
           type="month"
           value={month}
-          onChange={(e) => setMonth(e.target.value)}
+          onChange={(e) => { localStorage.setItem('dashboard-month', e.target.value); setMonth(e.target.value); }}
           className="rounded border border-slate-300 px-3 py-1.5 text-sm"
         />
       </div>

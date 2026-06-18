@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { euros, shortDate } from '../format';
 import { useCategories } from '../useCategories';
 import type { Tx, TxPage } from '../types';
+import { TxDetailModal } from '../components/TxDetailModal';
 
 export default function Transactions() {
   const { categories } = useCategories();
@@ -41,13 +42,6 @@ export default function Transactions() {
     });
     setData((d) => (d ? { ...d, transactions: d.transactions.map((t) => (t.id === txId ? updated : t)) } : d));
   }
-
-  useEffect(() => {
-    if (!selectedTx) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedTx(null); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [selectedTx]);
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
@@ -183,55 +177,7 @@ export default function Transactions() {
         </div>
       )}
 
-      {selectedTx && (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-        onClick={() => setSelectedTx(null)}
-      >
-        <div
-          className="w-full max-w-lg rounded-lg border border-slate-200 bg-white p-6 shadow-xl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="mb-4 flex items-start justify-between">
-            <div>
-              <p className="text-lg font-semibold">{selectedTx.counterparty_name || selectedTx.transaction_type}</p>
-              {selectedTx.status === 'rejected' && (
-                <span className="mt-1 inline-block rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700">rejected</span>
-              )}
-            </div>
-            <button onClick={() => setSelectedTx(null)} className="ml-4 text-slate-400 hover:text-slate-700">✕</button>
-          </div>
-
-          <dl className="space-y-2 text-sm">
-            <Row label="Amount">
-              <span className={selectedTx.amount_cents >= 0 ? 'font-semibold text-green-700' : 'font-semibold'}>
-                {euros(selectedTx.amount_cents)}
-              </span>
-            </Row>
-            <Row label="Execution date">{shortDate(selectedTx.execution_date)}</Row>
-            {selectedTx.value_date && selectedTx.value_date !== selectedTx.execution_date && (
-              <Row label="Value date">{shortDate(selectedTx.value_date)}</Row>
-            )}
-            <Row label="Type">{selectedTx.transaction_type}</Row>
-            <Row label="Details"><span className="break-all">{selectedTx.details}</span></Row>
-            <Row label="Category">
-              {selectedTx.category_name
-                ? <span>{selectedTx.category_icon} {selectedTx.category_name}</span>
-                : <span className="text-slate-400">Uncategorized</span>}
-            </Row>
-          </dl>
-        </div>
-      </div>
-    )}
-    </div>
-  );
-}
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex gap-4">
-      <dt className="w-32 shrink-0 text-slate-500">{label}</dt>
-      <dd className="flex-1 text-slate-900">{children}</dd>
+      {selectedTx && <TxDetailModal tx={selectedTx} onClose={() => setSelectedTx(null)} />}
     </div>
   );
 }
