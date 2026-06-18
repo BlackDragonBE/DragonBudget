@@ -9,14 +9,6 @@ services:
       - APP_PASSWORD=${APP_PASSWORD}
       - SESSION_SECRET=${SESSION_SECRET}
     restart: unless-stopped
+    # You can keep or remove this label; it won't hurt anything if left there.
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
-
-  watchtower:
-    image: containrrr/watchtower
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: --interval 300 --cleanup
-    environment:
-      - DOCKER_API_VERSION=1.40
-    restart: unless-stopped
