@@ -6,7 +6,7 @@ import { sessionMiddleware, requireAuth, mountAuthRoutes } from './auth';
 import { mountApiRoutes } from './routes';
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(sessionMiddleware);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
