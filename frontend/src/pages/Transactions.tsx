@@ -180,6 +180,11 @@ export default function Transactions() {
                         rejected
                       </span>
                     )}
+                    {t.is_transfer ? (
+                      <span className="ml-2 rounded bg-purple-100 px-1.5 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+                        transfer
+                      </span>
+                    ) : null}
                     {t.known_account_name && (
                       <span className="ml-2 rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-300">
                         {t.known_account_name}
@@ -205,7 +210,7 @@ export default function Transactions() {
                 </td>
                 <td
                   className={`whitespace-nowrap px-3 py-2 text-right align-top font-medium ${
-                    t.status === 'rejected' ? '' : t.amount_cents < 0 ? 'text-slate-900 dark:text-slate-100' : 'text-green-700'
+                    t.status === 'rejected' || t.is_transfer ? 'text-slate-400 dark:text-slate-500' : t.amount_cents < 0 ? 'text-slate-900 dark:text-slate-100' : 'text-green-700'
                   }`}
                 >
                   {euros(t.amount_cents)}

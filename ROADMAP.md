@@ -64,7 +64,7 @@ schema:
 - Average daily spend, days-remaining burn rate vs budget.
 - Income vs expense vs net summary tiles (some exist — round out).
 
-### 1.4 Internal-transfer detection / exclusion
+### 1.4 Internal-transfer detection / exclusion > DONE
 You have `known_accounts`. Auto-flag transfers between your own accounts so
 moving money to savings doesn't read as income+expense. Low cost given the
 infrastructure already exists; the payoff — clean income/expense totals — is
@@ -138,7 +138,7 @@ for spreadsheet users. Near-trivial.
 1. **Budget rollover (1.1)** — biggest single leap in usefulness. ✓ DONE
 2. **Cash-flow forecast (1.2)** — high value, you're already most of the way.
 3. **Insights (1.3)** — cheap wins on data you already have. ✓ DONE
-4. **Transfer detection (1.5)** — cleans income/expense totals; low cost.
+4. **Transfer detection (1.4)** — cleans income/expense totals; low cost. ✓ DONE
 5. Then pick from Tier 2 by what you actually find yourself wanting.
 
 Split transactions, goals, and notes are all "build when it bites" — don't

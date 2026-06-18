@@ -24,6 +24,21 @@ export function createDb(file: string): DB {
     conn.exec("ALTER TABLE rule_suggestions ADD COLUMN match_type TEXT NOT NULL DEFAULT 'contains'");
   }
 
+  // Migration: add is_transfer to transactions if missing (roadmap 1.4)
+  const txInfo = conn.prepare('PRAGMA table_info(transactions)').all() as { name: string }[];
+  if (!txInfo.some((c) => c.name === 'is_transfer'))
+    conn.exec('ALTER TABLE transactions ADD COLUMN is_transfer INTEGER NOT NULL DEFAULT 0');
+
+  // Migration: add is_own_account to known_accounts if missing (roadmap 1.4 refinement)
+  const kaInfo = conn.prepare('PRAGMA table_info(known_accounts)').all() as { name: string }[];
+  if (!kaInfo.some((c) => c.name === 'is_own_account'))
+    conn.exec('ALTER TABLE known_accounts ADD COLUMN is_own_account INTEGER NOT NULL DEFAULT 0');
+
+  // Sync transfer flags on every startup so existing known_accounts take effect immediately.
+  conn.exec(`UPDATE transactions SET is_transfer = CASE
+    WHEN REPLACE(counterparty_account, ' ', '') IN (SELECT account_number FROM known_accounts WHERE is_own_account = 1)
+    THEN 1 ELSE 0 END`);
+
   seedCategories(conn);
   return conn;
 }

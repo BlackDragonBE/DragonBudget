@@ -21,6 +21,9 @@ export function TxDetailModal({ tx, onClose }: { tx: Tx; onClose: () => void }) 
             {tx.status === 'rejected' && (
               <span className="mt-1 inline-block rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900 dark:text-red-300">rejected</span>
             )}
+            {tx.is_transfer ? (
+              <span className="mt-1 inline-block rounded bg-purple-100 px-1.5 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900 dark:text-purple-300">transfer — excluded from income/expense</span>
+            ) : null}
           </div>
           <button onClick={onClose} className="ml-4 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">✕</button>
         </div>

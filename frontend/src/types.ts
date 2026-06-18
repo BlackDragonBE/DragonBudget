@@ -59,12 +59,14 @@ export interface Tx {
   category_icon: string | null;
   category_color: string | null;
   known_account_name: string | null;
+  is_transfer: number;
 }
 
 export interface KnownAccount {
   id: number;
   name: string;
   account_number: string;
+  is_own_account: number;
 }
 
 export interface TxPage {

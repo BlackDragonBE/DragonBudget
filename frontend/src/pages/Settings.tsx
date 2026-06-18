@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { api } from '../api';
 import type { KnownAccount } from '../types';
 import { getTheme, setTheme, type Theme } from '../theme';
@@ -35,8 +35,6 @@ export default function Settings() {
 
   // accounts section
   const [accounts, setAccounts] = useState<KnownAccount[]>([]);
-  const [acctName, setAcctName] = useState('');
-  const [acctNumber, setAcctNumber] = useState('');
   const [acctError, setAcctError] = useState('');
 
   // danger section
@@ -69,15 +67,14 @@ export default function Settings() {
     } catch (e) { setMsg(`Import failed: ${(e as Error).message}`); }
   }
 
-  async function addAccount() {
+  async function addAccount(name: string, number: string, isOwn: 0 | 1) {
     setAcctError('');
     try {
       const row = await api<KnownAccount>('/known-accounts', {
         method: 'POST',
-        body: JSON.stringify({ name: acctName.trim(), account_number: acctNumber.trim() }),
+        body: JSON.stringify({ name: name.trim(), account_number: number.trim(), is_own_account: isOwn }),
       });
       setAccounts((a) => [...a, row].sort((x, y) => x.name.localeCompare(y.name)));
-      setAcctName(''); setAcctNumber('');
     } catch (e) { setAcctError((e as Error).message); }
   }
   async function deleteAccount(id: number) {
@@ -197,47 +194,26 @@ export default function Settings() {
         {section === 'accounts' && (
           <>
             <h1 className="text-xl font-semibold">Accounts</h1>
-            <section className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-              <h2 className="mb-1 font-medium text-slate-700 dark:text-slate-300">Known accounts</h2>
-              <p className="mb-4 text-sm text-slate-500">
-                Transactions whose counterparty account matches will show a labelled tag.
-              </p>
-              {accounts.length > 0 && (
-                <ul className="mb-4 space-y-1">
-                  {accounts.map((a) => (
-                    <li key={a.id} className="flex items-center justify-between rounded border border-slate-100 px-3 py-2 text-sm dark:border-slate-800">
-                      <span>
-                        <span className="font-medium">{a.name}</span>
-                        <span className="ml-3 font-mono text-xs text-slate-400">{a.account_number}</span>
-                      </span>
-                      <button onClick={() => deleteAccount(a.id)} className="text-slate-300 hover:text-red-500">✕</button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div className="flex gap-2">
-                <input
-                  value={acctName}
-                  onChange={(e) => setAcctName(e.target.value)}
-                  placeholder="Name (e.g. Savings)"
-                  className="flex-1 rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-                />
-                <input
-                  value={acctNumber}
-                  onChange={(e) => setAcctNumber(e.target.value)}
-                  placeholder="BE79 0351 3401 4433"
-                  className="flex-1 rounded border border-slate-300 px-3 py-1.5 text-sm font-mono"
-                />
-                <button
-                  onClick={addAccount}
-                  disabled={!acctName.trim() || !acctNumber.trim()}
-                  className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-40 dark:border-slate-600 dark:hover:bg-slate-800"
-                >
-                  Add
-                </button>
-              </div>
-              {acctError && <p className="mt-2 text-xs text-red-600">{acctError}</p>}
-            </section>
+
+            <AccountSubSection
+              title="My accounts"
+              description="Your own accounts (savings, joint, …). Transfers between these and your main account are excluded from income/expense totals."
+              accounts={accounts.filter((a) => a.is_own_account)}
+              onDelete={deleteAccount}
+              onAdd={(name, number) => addAccount(name, number, 1)}
+              error={acctError}
+              placeholder="BE79 0351 3401 4433"
+            />
+
+            <AccountSubSection
+              title="Tagged accounts"
+              description="Third-party accounts you want to label (employer, landlord, …). Matching transactions show a name badge — nothing else changes."
+              accounts={accounts.filter((a) => !a.is_own_account)}
+              onDelete={deleteAccount}
+              onAdd={(name, number) => addAccount(name, number, 0)}
+              error={acctError}
+              placeholder="BE28 3200 3872 7120"
+            />
           </>
         )}
 
@@ -271,5 +247,69 @@ export default function Settings() {
 
       </div>
     </div>
+  );
+}
+
+function AccountSubSection({
+  title, description, accounts, onDelete, onAdd, error, placeholder,
+}: {
+  title: string;
+  description: string;
+  accounts: KnownAccount[];
+  onDelete: (id: number) => void;
+  onAdd: (name: string, number: string) => void;
+  error: string;
+  placeholder: string;
+}) {
+  const [name, setName] = useState('');
+  const [number, setNumber] = useState('');
+
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    if (!name.trim() || !number.trim()) return;
+    onAdd(name, number);
+    setName(''); setNumber('');
+  }
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+      <h2 className="mb-1 font-medium text-slate-700 dark:text-slate-300">{title}</h2>
+      <p className="mb-4 text-sm text-slate-500">{description}</p>
+      {accounts.length > 0 && (
+        <ul className="mb-4 space-y-1">
+          {accounts.map((a) => (
+            <li key={a.id} className="flex items-center justify-between rounded border border-slate-100 px-3 py-2 text-sm dark:border-slate-800">
+              <span>
+                <span className="font-medium">{a.name}</span>
+                <span className="ml-3 font-mono text-xs text-slate-400">{a.account_number}</span>
+              </span>
+              <button onClick={() => onDelete(a.id)} className="text-slate-300 hover:text-red-500">✕</button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form onSubmit={submit} className="flex gap-2">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Name"
+          className="flex-1 rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+        />
+        <input
+          value={number}
+          onChange={(e) => setNumber(e.target.value)}
+          placeholder={placeholder}
+          className="flex-1 rounded border border-slate-300 px-3 py-1.5 text-sm font-mono dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+        />
+        <button
+          type="submit"
+          disabled={!name.trim() || !number.trim()}
+          className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-40 dark:border-slate-600 dark:hover:bg-slate-800"
+        >
+          Add
+        </button>
+      </form>
+      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+    </section>
   );
 }

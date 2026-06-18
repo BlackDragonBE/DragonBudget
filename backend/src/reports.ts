@@ -15,7 +15,7 @@ function carryover(db: DB, categoryId: number, month: string): number {
     .prepare('SELECT COALESCE(SUM(limit_cents), 0) AS v FROM budgets WHERE category_id = ? AND month >= ? AND month < ?')
     .get(categoryId, row.m, month) as { v: number };
   const s = db
-    .prepare("SELECT COALESCE(SUM(amount_cents), 0) AS v FROM transactions WHERE category_id = ? AND status = 'accepted' AND substr(execution_date, 1, 7) >= ? AND substr(execution_date, 1, 7) < ?")
+    .prepare("SELECT COALESCE(SUM(amount_cents), 0) AS v FROM transactions WHERE category_id = ? AND status = 'accepted' AND is_transfer = 0 AND substr(execution_date, 1, 7) >= ? AND substr(execution_date, 1, 7) < ?")
     .get(categoryId, row.m, month) as { v: number };
   return b.v + s.v;
 }
@@ -27,7 +27,7 @@ export function monthReport(db: DB, month: string) {
         COALESCE(SUM(CASE WHEN amount_cents > 0 THEN amount_cents END), 0) AS income_cents,
         COALESCE(SUM(CASE WHEN amount_cents < 0 THEN amount_cents END), 0) AS expense_cents
       FROM transactions
-      WHERE status = 'accepted' AND substr(execution_date, 1, 7) = ?`)
+      WHERE status = 'accepted' AND is_transfer = 0 AND substr(execution_date, 1, 7) = ?`)
     .get(month) as { income_cents: number; expense_cents: number };
 
   // Include a category if it has spending this month OR a budget for the month
@@ -43,7 +43,7 @@ export function monthReport(db: DB, month: string) {
       LEFT JOIN (
         SELECT category_id, SUM(amount_cents) AS spent_cents, COUNT(*) AS txn_count
         FROM transactions
-        WHERE status = 'accepted' AND substr(execution_date, 1, 7) = ?
+        WHERE status = 'accepted' AND is_transfer = 0 AND substr(execution_date, 1, 7) = ?
         GROUP BY category_id
       ) s ON s.category_id = c.id
       LEFT JOIN budgets b ON b.category_id = c.id AND b.month = ?
@@ -63,7 +63,7 @@ export function monthReport(db: DB, month: string) {
     .prepare(`
       SELECT t.*, NULL AS category_name, NULL AS category_icon, NULL AS category_color
       FROM transactions t
-      WHERE t.status = 'accepted' AND t.category_id IS NULL AND substr(t.execution_date, 1, 7) = ?
+      WHERE t.status = 'accepted' AND t.is_transfer = 0 AND t.category_id IS NULL AND substr(t.execution_date, 1, 7) = ?
       ORDER BY t.execution_date DESC`)
     .all(month);
 
@@ -181,7 +181,7 @@ export function insights(db: DB, month: string, today: string) {
   const days_elapsed = tMonth < month ? 0 : tMonth > month ? days_in_month : Number(today.slice(8, 10));
 
   const expense = (db
-    .prepare("SELECT COALESCE(SUM(amount_cents), 0) AS s FROM transactions WHERE status = 'accepted' AND amount_cents < 0 AND substr(execution_date, 1, 7) = ?")
+    .prepare("SELECT COALESCE(SUM(amount_cents), 0) AS s FROM transactions WHERE status = 'accepted' AND is_transfer = 0 AND amount_cents < 0 AND substr(execution_date, 1, 7) = ?")
     .get(month) as { s: number }).s;
   const budget_total_cents = (db
     .prepare("SELECT COALESCE(SUM(b.limit_cents), 0) AS s FROM budgets b JOIN categories c ON c.id = b.category_id WHERE b.month = ? AND c.is_income = 0")
@@ -196,7 +196,7 @@ export function insights(db: DB, month: string, today: string) {
               FROM transactions t
               LEFT JOIN categories c ON c.id = t.category_id
               LEFT JOIN known_accounts ka ON REPLACE(t.counterparty_account, ' ', '') = ka.account_number
-              WHERE t.status = 'accepted' AND t.amount_cents < 0 AND substr(t.execution_date, 1, 7) = ?
+              WHERE t.status = 'accepted' AND t.is_transfer = 0 AND t.amount_cents < 0 AND substr(t.execution_date, 1, 7) = ?
               ORDER BY t.amount_cents ASC LIMIT 5`)
     .all(month);
 
@@ -205,9 +205,9 @@ export function insights(db: DB, month: string, today: string) {
                      COALESCE(cur.s, 0) AS spent_cents, COALESCE(prv.s, 0) AS prev_cents
               FROM categories c
               LEFT JOIN (SELECT category_id, SUM(amount_cents) s FROM transactions
-                         WHERE status = 'accepted' AND substr(execution_date, 1, 7) = ? GROUP BY category_id) cur ON cur.category_id = c.id
+                         WHERE status = 'accepted' AND is_transfer = 0 AND substr(execution_date, 1, 7) = ? GROUP BY category_id) cur ON cur.category_id = c.id
               LEFT JOIN (SELECT category_id, SUM(amount_cents) s FROM transactions
-                         WHERE status = 'accepted' AND substr(execution_date, 1, 7) = ? GROUP BY category_id) prv ON prv.category_id = c.id
+                         WHERE status = 'accepted' AND is_transfer = 0 AND substr(execution_date, 1, 7) = ? GROUP BY category_id) prv ON prv.category_id = c.id
               WHERE c.archived = 0 AND (cur.s IS NOT NULL OR prv.s IS NOT NULL)`)
     .all(month, prev) as { spent_cents: number; prev_cents: number }[];
   // Top movers by absolute change in magnitude (works for both income and expense).
@@ -233,7 +233,7 @@ function prevMonthOf(m: string): string {
 // Per-category spending per month (DESIGN.md §7.2), pivoted for a stacked chart:
 // rows are { month, <CategoryName>: absCents }. isIncome=true flips to income categories.
 export function categoryTrends(db: DB, opts: { from?: string; to?: string; isIncome?: boolean } = {}) {
-  const where = ["t.status = 'accepted'", `c.is_income = ${opts.isIncome ? 1 : 0}`, 't.execution_date IS NOT NULL'];
+  const where = ["t.status = 'accepted'", "t.is_transfer = 0", `c.is_income = ${opts.isIncome ? 1 : 0}`, 't.execution_date IS NOT NULL'];
   const params: string[] = [];
   if (opts.from) { where.push("substr(t.execution_date,1,7) >= ?"); params.push(opts.from); }
   if (opts.to) { where.push("substr(t.execution_date,1,7) <= ?"); params.push(opts.to); }
