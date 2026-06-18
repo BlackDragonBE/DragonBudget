@@ -87,7 +87,6 @@ mounted before the gate so login is reachable.
 ## Testing notes
 
 Tests use `node:test` + `node:assert/strict` with `createDb(':memory:')` for isolation.
-The real 485-row export at `csv_exports/CSV_2026-06-17-16.52.csv` is the fixture for
-`csv.test.ts` (gitignored as private financial data; that test skips if absent). When
+The real 485-row export at `csv_exports/data.csv` holds actual data that can be used for testing. When
 adding logic to the parser, categorization, or recurring detection, add a focused test
 there rather than a synthetic one — the real export carries the edge cases.

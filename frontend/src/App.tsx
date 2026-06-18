@@ -11,6 +11,7 @@ import Rules from './pages/Rules';
 import Budgets from './pages/Budgets';
 import Recurring from './pages/Recurring';
 import Import from './pages/Import';
+import Settings from './pages/Settings';
 
 interface AuthStatus {
   authRequired: boolean;
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/budgets" element={<Budgets />} />
         <Route path="/recurring" element={<Recurring />} />
         <Route path="/import" element={<Import />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>

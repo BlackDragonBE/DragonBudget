@@ -55,6 +55,13 @@ transactionsRouter.get('/', (req, res) => {
   res.json({ transactions, page, pageSize: PAGE_SIZE, total });
 });
 
+// DELETE /api/transactions — wipe all transactions and recurring entries.
+transactionsRouter.delete('/', (_req, res) => {
+  db.prepare('DELETE FROM recurring_expenses').run();
+  db.prepare('DELETE FROM transactions').run();
+  res.json({ ok: true });
+});
+
 // PATCH /api/transactions/:id { category_id: number | null } — manual categorize.
 // Always sets category_source='manual' (rules never overwrite this; §5.1/§5.3).
 const PatchTx = z.object({ category_id: z.number().int().nullable() });

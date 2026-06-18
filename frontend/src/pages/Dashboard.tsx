@@ -19,7 +19,7 @@ export default function Dashboard() {
     load();
   }
 
-  const incomeCats = (report?.categories ?? []).filter((c) => c.spent_cents >= 0);
+  const incomeCats = (report?.categories ?? []).filter((c) => c.spent_cents > 0);
   const expenseCats = (report?.categories ?? []).filter((c) => c.spent_cents < 0);
   const maxIncome = Math.max(1, ...incomeCats.map((c) => c.spent_cents));
   const maxSpend = Math.max(1, ...expenseCats.map((c) => Math.abs(c.spent_cents)));

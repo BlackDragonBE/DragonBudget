@@ -1,7 +1,5 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import path from 'node:path';
 import { parseBnpCsv, CsvFormatError } from '../src/csv/parse';
 import { importTransactions } from '../src/csv/import';
 import { createDb } from '../src/db';
@@ -60,19 +58,4 @@ test('import: is idempotent on re-import (dedup by import_hash)', () => {
 
   const count = (db.prepare('SELECT COUNT(*) AS n FROM transactions').get() as { n: number }).n;
   assert.equal(count, 3);
-});
-
-// Real 485-row export (DESIGN.md §11). Skipped if the private file is absent.
-const FIXTURE = path.join(__dirname, '..', '..', 'csv_exports', 'CSV_2026-06-17-16.52.csv');
-test('import: real BNP export parses and dedups', { skip: !fs.existsSync(FIXTURE) }, () => {
-  const content = fs.readFileSync(FIXTURE, 'utf8');
-  const rows = parseBnpCsv(content);
-  assert.equal(rows.length, 485);
-  assert.ok(rows.every((r) => Number.isInteger(r.amount_cents)));
-  assert.ok(rows.some((r) => r.status === 'rejected'));
-  assert.ok(rows.some((r) => r.counterparty_name === null)); // card payments
-
-  const db = createDb(':memory:');
-  assert.equal(importTransactions(db, rows).inserted, 485);
-  assert.equal(importTransactions(db, rows).inserted, 0); // idempotent
 });

@@ -11,6 +11,7 @@ const NAV = [
   { to: '/budgets', label: 'Budgets' },
   { to: '/recurring', label: 'Recurring' },
   { to: '/import', label: 'Import' },
+  { to: '/settings', label: 'Settings' },
 ];
 
 export default function Layout({ authRequired = false }: { authRequired?: boolean }) {
