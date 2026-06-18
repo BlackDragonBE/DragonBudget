@@ -27,28 +27,28 @@ export default function Categories() {
     <div className="max-w-2xl space-y-4">
       <h2 className="text-xl font-semibold">Categories</h2>
 
-      <div className="flex flex-wrap items-center gap-2 rounded border border-slate-200 bg-white p-3">
+      <div className="flex flex-wrap items-center gap-2 rounded border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
         <input
           value={icon}
           onChange={(e) => setIcon(e.target.value)}
           placeholder="🛒"
-          className="w-14 rounded border border-slate-300 px-2 py-1.5 text-center text-sm"
+          className="w-14 rounded border border-slate-300 px-2 py-1.5 text-center text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
         />
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && add()}
           placeholder="New category name"
-          className="flex-1 rounded border border-slate-300 px-3 py-1.5 text-sm"
+          className="flex-1 rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
         />
-        <button onClick={add} className="rounded bg-slate-900 px-4 py-1.5 text-sm font-medium text-white">
+        <button onClick={add} className="rounded bg-slate-900 px-4 py-1.5 text-sm font-medium text-white dark:bg-slate-100 dark:text-slate-900">
           Add
         </button>
       </div>
 
-      {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>}
 
-      <div className="divide-y divide-slate-100 rounded border border-slate-200 bg-white">
+      <div className="divide-y divide-slate-100 rounded border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-700 dark:bg-slate-900">
         {categories.map((c) => (
           <CategoryRow key={c.id} category={c} onChange={reload} />
         ))}
@@ -68,19 +68,19 @@ function CategoryRow({ category, onChange }: { category: Category; onChange: () 
         key={`icon-${category.icon ?? ''}`}
         defaultValue={category.icon ?? ''}
         onBlur={(e) => e.target.value !== (category.icon ?? '') && patch({ icon: e.target.value || null })}
-        className="w-12 rounded border border-slate-200 px-2 py-1 text-center text-sm"
+        className="w-12 rounded border border-slate-200 px-2 py-1 text-center text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
       />
       <input
         key={`name-${category.name}`}
         defaultValue={category.name}
         onBlur={(e) => e.target.value.trim() && e.target.value !== category.name && patch({ name: e.target.value })}
-        className="min-w-40 flex-1 rounded border border-slate-200 px-2 py-1 text-sm"
+        className="min-w-40 flex-1 rounded border border-slate-200 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
       />
       <input
         type="color"
         defaultValue={category.color ?? '#64748b'}
         onChange={(e) => patch({ color: e.target.value })}
-        className="h-8 w-10 rounded border border-slate-200"
+        className="h-8 w-10 rounded border border-slate-200 dark:border-slate-700"
       />
       <label className="flex items-center gap-1 text-xs text-slate-500">
         <input type="checkbox" defaultChecked={!!category.is_income} onChange={(e) => patch({ is_income: e.target.checked })} />
@@ -88,13 +88,13 @@ function CategoryRow({ category, onChange }: { category: Category; onChange: () 
       </label>
       <Link
         to={`/transactions?category_id=${category.id}`}
-        className="w-28 rounded border border-slate-300 px-2 py-1 text-center text-xs text-slate-600 hover:bg-slate-50"
+        className="w-28 rounded border border-slate-300 px-2 py-1 text-center text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-800"
       >
         {category.txn_count} transaction{category.txn_count !== 1 ? 's' : ''}
       </Link>
       <button
         onClick={() => patch({ archived: !archived })}
-        className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+        className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-800"
       >
         {archived ? 'Restore' : 'Archive'}
       </button>

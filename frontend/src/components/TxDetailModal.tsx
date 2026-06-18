@@ -12,17 +12,17 @@ export function TxDetailModal({ tx, onClose }: { tx: Tx; onClose: () => void }) 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
       <div
-        className="w-full max-w-lg rounded-lg border border-slate-200 bg-white p-6 shadow-xl"
+        className="w-full max-w-lg rounded-lg border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between">
           <div>
             <p className="text-lg font-semibold">{tx.counterparty_name || tx.transaction_type}</p>
             {tx.status === 'rejected' && (
-              <span className="mt-1 inline-block rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700">rejected</span>
+              <span className="mt-1 inline-block rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900 dark:text-red-300">rejected</span>
             )}
           </div>
-          <button onClick={onClose} className="ml-4 text-slate-400 hover:text-slate-700">✕</button>
+          <button onClick={onClose} className="ml-4 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">✕</button>
         </div>
 
         <dl className="space-y-2 text-sm">
@@ -51,8 +51,8 @@ export function TxDetailModal({ tx, onClose }: { tx: Tx; onClose: () => void }) 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex gap-4">
-      <dt className="w-32 shrink-0 text-slate-500">{label}</dt>
-      <dd className="flex-1 text-slate-900">{children}</dd>
+      <dt className="w-32 shrink-0 text-slate-500 dark:text-slate-400">{label}</dt>
+      <dd className="flex-1 text-slate-900 dark:text-slate-100">{children}</dd>
     </div>
   );
 }

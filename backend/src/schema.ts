@@ -83,4 +83,10 @@ CREATE TABLE IF NOT EXISTS rule_suggestions (
   status      TEXT NOT NULL DEFAULT 'pending',
   created_at  TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS known_accounts (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  name           TEXT NOT NULL,
+  account_number TEXT NOT NULL UNIQUE
+);
 `;

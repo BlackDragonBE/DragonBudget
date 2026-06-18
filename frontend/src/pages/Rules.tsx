@@ -49,17 +49,17 @@ export default function Rules() {
     <div className="max-w-3xl space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Category rules</h2>
-        <button onClick={applyAll} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">
+        <button onClick={applyAll} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800">
           Re-run rules now
         </button>
       </div>
-      {applyMsg && <p className="rounded bg-green-50 px-3 py-2 text-sm text-green-700">{applyMsg}</p>}
+      {applyMsg && <p className="rounded bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">{applyMsg}</p>}
 
       {suggestions.length > 0 && (
-        <div className="space-y-2 rounded border border-blue-200 bg-blue-50 p-4">
-          <h3 className="text-sm font-medium text-blue-800">Suggested rules</h3>
+        <div className="space-y-2 rounded border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950">
+          <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300">Suggested rules</h3>
           {suggestions.map((s) => (
-            <div key={s.id} className="rounded bg-white px-3 py-2 text-sm">
+            <div key={s.id} className="rounded bg-white px-3 py-2 text-sm dark:bg-slate-800">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span>
                   Transactions containing <span className="font-medium">"{s.token}"</span> →{' '}
@@ -69,7 +69,7 @@ export default function Rules() {
                 <span className="flex gap-2">
                   <button
                     onClick={() => setPreviewSuggId(previewSuggId === s.id ? null : s.id)}
-                    className="rounded border border-slate-300 px-3 py-1 text-xs hover:bg-slate-50"
+                    className="rounded border border-slate-300 px-3 py-1 text-xs hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-700"
                   >
                     {previewSuggId === s.id ? 'Hide' : 'Preview'}
                   </button>
@@ -82,9 +82,9 @@ export default function Rules() {
                 </span>
               </div>
               {previewSuggId === s.id && s.sample.length > 0 && (
-                <ul className="mt-2 space-y-1 border-t border-slate-100 pt-2">
+                <ul className="mt-2 space-y-1 border-t border-slate-100 pt-2 dark:border-slate-700">
                   {s.sample.map((t) => (
-                    <li key={t.id} onClick={() => openTx(t.id)} className="flex cursor-pointer justify-between gap-2 rounded px-1 text-xs hover:bg-slate-50">
+                    <li key={t.id} onClick={() => openTx(t.id)} className="flex cursor-pointer justify-between gap-2 rounded px-1 text-xs hover:bg-slate-50 dark:hover:bg-slate-700">
                       <span className="truncate text-slate-500">
                         {shortDate(t.execution_date)} · {t.counterparty_name || t.details.slice(0, 50)}
                       </span>
@@ -108,14 +108,14 @@ export default function Rules() {
         placeholder="Search rules…"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="w-full rounded border border-slate-300 px-3 py-1.5 text-sm"
+        className="w-full rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
       />
 
       {(() => {
         const q = search.toLowerCase();
-        const visible = q ? rules.filter((r) => r.match_value.toLowerCase().includes(q) || r.category_name.toLowerCase().includes(q)) : rules;
+        const visible = q ? rules.filter((r) => r.match_value.toLowerCase().includes(q) || r.category_name?.toLowerCase().includes(q)) : rules;
         return (
-          <div className="divide-y divide-slate-100 rounded border border-slate-200 bg-white">
+          <div className="divide-y divide-slate-100 rounded border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-700 dark:bg-slate-900">
             {visible.length === 0 && (
               <p className="px-3 py-6 text-center text-sm text-slate-400">
                 {rules.length === 0 ? 'No rules yet.' : `No rules match "${search}".`}
@@ -172,8 +172,8 @@ function NewRuleForm({ categories, onCreated, onOpenTx }: { categories: Category
   }
 
   return (
-    <div className="space-y-3 rounded border border-slate-200 bg-white p-4">
-      <h3 className="text-sm font-medium text-slate-600">New rule</h3>
+    <div className="space-y-3 rounded border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+      <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">New rule</h3>
       <RuleFields
         categories={categories}
         field={field} setField={setField}
@@ -184,15 +184,15 @@ function NewRuleForm({ categories, onCreated, onOpenTx }: { categories: Category
       />
 
       <div className="flex gap-2">
-        <button onClick={doPreview} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">
+        <button onClick={doPreview} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800">
           Preview matches
         </button>
-        <button onClick={save} className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white">
+        <button onClick={save} className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-slate-100 dark:text-slate-900">
           Save rule
         </button>
       </div>
 
-      {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>}
 
       {preview && <PreviewList preview={preview} onOpenTx={onOpenTx} />}
     </div>
@@ -278,18 +278,18 @@ function RuleRow({ rule, categories, onChange, onOpenTx }: { rule: Rule; categor
         />
 
         <div className="flex gap-2">
-          <button onClick={doPreview} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">
+          <button onClick={doPreview} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800">
             Preview matches
           </button>
-          <button onClick={save} className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white">
+          <button onClick={save} className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-slate-100 dark:text-slate-900">
             Save
           </button>
-          <button onClick={cancel} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">
+          <button onClick={cancel} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800">
             Cancel
           </button>
         </div>
 
-        {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+        {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>}
 
         {preview && <PreviewList preview={preview} onOpenTx={onOpenTx} />}
       </div>
@@ -305,16 +305,16 @@ function RuleRow({ rule, categories, onChange, onOpenTx }: { rule: Rule; categor
         <span className="text-slate-400">→</span>{' '}
         <span>{rule.category_icon} {rule.category_name}</span>
         {!!rule.created_from_suggestion && (
-          <span className="ml-2 rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-600">suggested</span>
+          <span className="ml-2 rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-600 dark:bg-blue-900 dark:text-blue-400">suggested</span>
         )}
       </span>
-      <button onClick={toggle} className="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50">
+      <button onClick={toggle} className="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800">
         {rule.enabled ? 'Disable' : 'Enable'}
       </button>
-      <button onClick={() => setEditing(true)} className="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50">
+      <button onClick={() => setEditing(true)} className="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800">
         Edit
       </button>
-      <button onClick={remove} className="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50">
+      <button onClick={remove} className="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950">
         Delete
       </button>
     </div>
@@ -347,12 +347,12 @@ function RuleFields({
   return (
     <div className="flex flex-wrap items-end gap-2 text-sm">
       <Field label="When">
-        <select value={field} onChange={(e) => setField(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5">
+        <select value={field} onChange={(e) => setField(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
           {FIELDS.map((f) => <option key={f.v} value={f.v}>{f.label}</option>)}
         </select>
       </Field>
       <Field label=" ">
-        <select value={type} onChange={(e) => setType(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5">
+        <select value={type} onChange={(e) => setType(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
           {TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}
         </select>
       </Field>
@@ -361,11 +361,11 @@ function RuleFields({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="e.g. KRUIDVAT"
-          className="rounded border border-slate-300 px-2 py-1.5"
+          className="rounded border border-slate-300 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
         />
       </Field>
       <Field label="→ Category">
-        <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5">
+        <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
           <option value="">Select…</option>
           {categories.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
         </select>
@@ -375,7 +375,7 @@ function RuleFields({
           type="number"
           value={priority}
           onChange={(e) => setPriority(Number(e.target.value))}
-          className="w-20 rounded border border-slate-300 px-2 py-1.5"
+          className="w-20 rounded border border-slate-300 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
         />
       </Field>
       {setEnabled && (
@@ -395,11 +395,11 @@ function RuleFields({
 // Shared "N existing transaction(s) would match" preview list.
 function PreviewList({ preview, onOpenTx }: { preview: RulePreview; onOpenTx: (id: number) => void }) {
   return (
-    <div className="rounded bg-slate-50 p-3 text-sm">
+    <div className="rounded bg-slate-50 p-3 text-sm dark:bg-slate-800">
       <p className="mb-2 font-medium">{preview.total} existing transaction(s) would match:</p>
       <ul className="space-y-1">
         {preview.sample.slice(0, 8).map((t) => (
-          <li key={t.id} onClick={() => onOpenTx(t.id)} className="flex cursor-pointer justify-between gap-2 rounded px-1 hover:bg-slate-100">
+          <li key={t.id} onClick={() => onOpenTx(t.id)} className="flex cursor-pointer justify-between gap-2 rounded px-1 hover:bg-slate-100 dark:hover:bg-slate-700">
             <span className="truncate text-slate-500">
               {shortDate(t.execution_date)} · {t.counterparty_name || t.details.slice(0, 50)}
             </span>

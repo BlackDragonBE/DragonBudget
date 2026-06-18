@@ -44,38 +44,38 @@ export default function Budgets() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xl font-semibold">Budgets</h2>
         <div className="flex gap-2">
-          <button onClick={copyPrev} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">
+          <button onClick={copyPrev} className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800">
             Copy from {prevMonth(month)}
           </button>
           <input
             type="month"
             value={month}
             onChange={(e) => { setMonth(e.target.value); localStorage.setItem('budgets-month', e.target.value); }}
-            className="rounded border border-slate-300 px-3 py-1.5 text-sm"
+            className="rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
           />
         </div>
       </div>
-      {msg && <p className="rounded bg-green-50 px-3 py-2 text-sm text-green-700">{msg}</p>}
+      {msg && <p className="rounded bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">{msg}</p>}
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         {/* Income — top on narrow, right on wide */}
-        <div className="order-first divide-y divide-slate-100 rounded border border-slate-200 bg-white lg:order-last lg:w-72 lg:shrink-0">
-          <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500">
+        <div className="order-first divide-y divide-slate-100 rounded border border-slate-200 bg-white lg:order-last lg:w-72 lg:shrink-0 dark:divide-slate-800 dark:border-slate-700 dark:bg-slate-900">
+          <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
             <span className="flex-1">Income</span>
             <span className="w-24 text-right">Received</span>
             <span className="w-28 text-right">Expected (€)</span>
           </div>
-          <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 text-sm font-medium">
-            <span className="flex-1 text-slate-700">Total</span>
+          <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 text-sm font-medium dark:bg-slate-800">
+            <span className="flex-1 text-slate-700 dark:text-slate-300">Total</span>
             <span className="w-24 text-right text-green-700">{euros(totalIncome)}</span>
-            <span className="w-28 text-right text-slate-700">{totalIncomeLimit > 0 ? euros(totalIncomeLimit) : '—'}</span>
+            <span className="w-28 text-right text-slate-700 dark:text-slate-300">{totalIncomeLimit > 0 ? euros(totalIncomeLimit) : '—'}</span>
           </div>
           {incomeCategories.map((c) => {
             const row = byCat.get(c.id);
             const received = row?.spent_cents ?? 0;
             return (
               <div key={c.id} className="flex items-center gap-2 px-3 py-2 text-sm">
-                <Link to={`/transactions?month=${month}&category_id=${c.id}&direction=income`} className="flex-1 rounded hover:bg-slate-50">{c.icon} {c.name}</Link>
+                <Link to={`/transactions?month=${month}&category_id=${c.id}&direction=income`} className="flex-1 rounded hover:bg-slate-50 dark:hover:bg-slate-800">{c.icon} {c.name}</Link>
                 <span className="w-24 text-right text-green-700">{euros(received)}</span>
                 <input
                   key={`${c.id}-${month}-${report ? 'y' : 'n'}`}
@@ -85,7 +85,7 @@ export default function Budgets() {
                   defaultValue={row?.limit_cents != null ? (row.limit_cents / 100).toFixed(2) : ''}
                   onBlur={(e) => setLimit(c.id, e.target.value)}
                   placeholder="—"
-                  className="w-28 rounded border border-slate-300 px-2 py-1 text-right"
+                  className="w-28 rounded border border-slate-300 px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                 />
               </div>
             );
@@ -93,18 +93,18 @@ export default function Budgets() {
         </div>
 
         {/* Expenses — bottom on narrow, left on wide */}
-        <div className="order-last min-w-0 flex-1 divide-y divide-slate-100 rounded border border-slate-200 bg-white lg:order-first">
-          <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500">
+        <div className="order-last min-w-0 flex-1 divide-y divide-slate-100 rounded border border-slate-200 bg-white lg:order-first dark:divide-slate-800 dark:border-slate-700 dark:bg-slate-900">
+          <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
             <span className="flex-1">Category</span>
             <span className="w-24 text-right">Spent</span>
             <span className="w-28 text-right">Monthly limit (€)</span>
           </div>
-          <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 text-sm font-medium">
-            <span className="flex-1 text-slate-700">Total</span>
+          <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 text-sm font-medium dark:bg-slate-800">
+            <span className="flex-1 text-slate-700 dark:text-slate-300">Total</span>
             <span className={`w-24 text-right ${totalSpent > totalLimit && totalLimit > 0 ? 'text-red-600' : 'text-slate-700'}`}>
               {euros(totalSpent)}
             </span>
-            <span className="w-28 text-right text-slate-700">{totalLimit > 0 ? euros(totalLimit) : '—'}</span>
+            <span className="w-28 text-right text-slate-700 dark:text-slate-300">{totalLimit > 0 ? euros(totalLimit) : '—'}</span>
           </div>
           {expenseCategories.map((c) => {
             const row = byCat.get(c.id);
@@ -112,8 +112,8 @@ export default function Budgets() {
             const over = row?.limit_cents != null && spent > row.limit_cents;
             return (
               <div key={c.id} className="flex items-center gap-2 px-3 py-2 text-sm">
-                <Link to={`/transactions?month=${month}&category_id=${c.id}&direction=expense`} className="flex-1 rounded hover:bg-slate-50">{c.icon} {c.name}</Link>
-                <span className={`w-24 text-right ${over ? 'font-semibold text-red-600' : 'text-slate-600'}`}>
+                <Link to={`/transactions?month=${month}&category_id=${c.id}&direction=expense`} className="flex-1 rounded hover:bg-slate-50 dark:hover:bg-slate-800">{c.icon} {c.name}</Link>
+                <span className={`w-24 text-right ${over ? 'font-semibold text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'}`}>
                   {euros(spent)}
                 </span>
                 <input
@@ -124,15 +124,15 @@ export default function Budgets() {
                   defaultValue={row?.limit_cents != null ? (row.limit_cents / 100).toFixed(2) : ''}
                   onBlur={(e) => setLimit(c.id, e.target.value)}
                   placeholder="—"
-                  className="w-28 rounded border border-slate-300 px-2 py-1 text-right"
+                  className="w-28 rounded border border-slate-300 px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                 />
               </div>
             );
           })}
           {uncategorizedSpent > 0 && (
             <div className="flex items-center gap-2 px-3 py-2 text-sm">
-              <Link to={`/transactions?month=${month}&category_id=none`} className="flex-1 rounded text-slate-400 hover:bg-slate-50">Uncategorized</Link>
-              <span className="w-24 text-right text-slate-600">{euros(uncategorizedSpent)}</span>
+              <Link to={`/transactions?month=${month}&category_id=none`} className="flex-1 rounded text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800">Uncategorized</Link>
+              <span className="w-24 text-right text-slate-600 dark:text-slate-400">{euros(uncategorizedSpent)}</span>
               <span className="w-28" />
             </div>
           )}

@@ -8,9 +8,11 @@ export const transactionsRouter = Router();
 const PAGE_SIZE = 50;
 
 const TX_SELECT = `
-  SELECT t.*, c.name AS category_name, c.icon AS category_icon, c.color AS category_color
+  SELECT t.*, c.name AS category_name, c.icon AS category_icon, c.color AS category_color,
+         ka.name AS known_account_name
   FROM transactions t
-  LEFT JOIN categories c ON c.id = t.category_id`;
+  LEFT JOIN categories c ON c.id = t.category_id
+  LEFT JOIN known_accounts ka ON REPLACE(t.counterparty_account, ' ', '') = ka.account_number`;
 
 const getTx = (id: number) => db.prepare(`${TX_SELECT} WHERE t.id = ?`).get(id);
 

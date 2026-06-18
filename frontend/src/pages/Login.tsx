@@ -28,8 +28,8 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-      <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded border border-slate-200 bg-white p-6">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4 dark:bg-slate-950">
+      <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-900">
         <h1 className="text-lg font-semibold">🐉 DragonBudget</h1>
         <input
           type="password"
@@ -37,12 +37,12 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
           autoFocus
-          className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
         />
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button
           disabled={busy}
-          className="w-full rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="w-full rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
         >
           {busy ? '…' : 'Log in'}
         </button>

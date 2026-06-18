@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend,
 } from 'recharts';
@@ -29,7 +29,24 @@ function rangeFor(preset: string): { fromDate?: string; toDate: string } {
 
 const eurTick = (v: number) => '€' + Math.round(v / 100);
 
+function useDark() {
+  return useSyncExternalStore(
+    (cb) => {
+      const mo = new MutationObserver(cb);
+      mo.observe(document.documentElement, { attributeFilter: ['class'] });
+      return () => mo.disconnect();
+    },
+    () => document.documentElement.classList.contains('dark'),
+  );
+}
+
 export default function AllTime() {
+  const dark = useDark();
+  const chartColors = {
+    grid: dark ? '#334155' : '#f1f5f9',
+    tick: dark ? '#94a3b8' : '#64748b',
+    tooltip: dark ? { backgroundColor: '#1e293b', border: '1px solid #334155', color: '#e2e8f0' } : {},
+  };
   const [preset, setPreset] = useState('6m');
   const [currentEuros, setCurrentEuros] = useState(() => localStorage.getItem('currentBalance') ?? '0');
   const [balance, setBalance] = useState<BalancePoint[]>([]);
@@ -59,43 +76,43 @@ export default function AllTime() {
             <input
               value={currentEuros}
               onChange={(e) => { setCurrentEuros(e.target.value); localStorage.setItem('currentBalance', e.target.value); }}
-              className="w-24 rounded border border-slate-300 px-2 py-1"
+              className="w-24 rounded border border-slate-300 px-2 py-1 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
             />
           </label>
-          <select value={preset} onChange={(e) => setPreset(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5">
+          <select value={preset} onChange={(e) => setPreset(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100">
             {PRESETS.map((p) => <option key={p.v} value={p.v}>{p.label}</option>)}
           </select>
         </div>
       </div>
 
-      <section className="rounded border border-slate-200 bg-white p-4">
-        <h3 className="mb-3 text-sm font-medium text-slate-600">Balance over time</h3>
+      <section className="rounded border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h3 className="mb-3 text-sm font-medium text-slate-600 dark:text-slate-400">Balance over time</h3>
         <div className="h-72 w-full">
           <ResponsiveContainer>
             <LineChart data={balance} margin={{ top: 5, right: 10, bottom: 5, left: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="date" tick={{ fontSize: 11 }} minTickGap={40} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={eurTick} width={60} />
-              <Tooltip formatter={(v: number) => euros(v)} />
+              <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+              <XAxis dataKey="date" tick={{ fontSize: 11, fill: chartColors.tick }} minTickGap={40} />
+              <YAxis tick={{ fontSize: 11, fill: chartColors.tick }} tickFormatter={eurTick} width={60} />
+              <Tooltip formatter={(v: number) => euros(v)} contentStyle={chartColors.tooltip} />
               <Line type="monotone" dataKey="balance_cents" name="Balance" stroke="#0ea5e9" dot={false} strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </section>
 
-      <section className="rounded border border-slate-200 bg-white p-4">
-        <h3 className="mb-3 text-sm font-medium text-slate-600">Spending by category per month</h3>
+      <section className="rounded border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h3 className="mb-3 text-sm font-medium text-slate-600 dark:text-slate-400">Spending by category per month</h3>
         {trends.data.length === 0 ? (
           <p className="text-sm text-slate-400">No spending in this range.</p>
         ) : (
           <div className="h-80 w-full">
             <ResponsiveContainer>
               <BarChart data={trends.data} margin={{ top: 5, right: 10, bottom: 5, left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={eurTick} width={60} />
-                <Tooltip formatter={(v: number) => euros(v)} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+                <XAxis dataKey="month" tick={{ fontSize: 11, fill: chartColors.tick }} />
+                <YAxis tick={{ fontSize: 11, fill: chartColors.tick }} tickFormatter={eurTick} width={60} />
+                <Tooltip formatter={(v: number) => euros(v)} contentStyle={chartColors.tooltip} />
+                <Legend wrapperStyle={{ fontSize: 12, color: chartColors.tick }} />
                 {trends.categories.map((c, i) => (
                   <Bar key={c.id} dataKey={c.name} stackId="spend" fill={c.color ?? PALETTE[i % PALETTE.length]} />
                 ))}
@@ -105,19 +122,19 @@ export default function AllTime() {
         )}
       </section>
 
-      <section className="rounded border border-slate-200 bg-white p-4">
-        <h3 className="mb-3 text-sm font-medium text-slate-600">Income by category per month</h3>
+      <section className="rounded border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h3 className="mb-3 text-sm font-medium text-slate-600 dark:text-slate-400">Income by category per month</h3>
         {incomeTrends.data.length === 0 ? (
           <p className="text-sm text-slate-400">No income in this range.</p>
         ) : (
           <div className="h-80 w-full">
             <ResponsiveContainer>
               <BarChart data={incomeTrends.data} margin={{ top: 5, right: 10, bottom: 5, left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={eurTick} width={60} />
-                <Tooltip formatter={(v: number) => euros(v)} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+                <XAxis dataKey="month" tick={{ fontSize: 11, fill: chartColors.tick }} />
+                <YAxis tick={{ fontSize: 11, fill: chartColors.tick }} tickFormatter={eurTick} width={60} />
+                <Tooltip formatter={(v: number) => euros(v)} contentStyle={chartColors.tooltip} />
+                <Legend wrapperStyle={{ fontSize: 12, color: chartColors.tick }} />
                 {incomeTrends.categories.map((c, i) => (
                   <Bar key={c.id} dataKey={c.name} stackId="income" fill={c.color ?? PALETTE[i % PALETTE.length]} />
                 ))}

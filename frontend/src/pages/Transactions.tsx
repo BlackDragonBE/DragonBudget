@@ -60,7 +60,7 @@ export default function Transactions() {
     return (
       <th
         onClick={() => toggleSort(col)}
-        className={`cursor-pointer select-none px-3 py-2 font-medium hover:text-slate-700${right ? ' text-right' : ''}`}
+        className={`cursor-pointer select-none px-3 py-2 font-medium hover:text-slate-700 dark:hover:text-slate-300${right ? ' text-right' : ''}`}
       >
         {children}{arrow && <span className="text-slate-400">{arrow}</span>}
       </th>
@@ -76,18 +76,18 @@ export default function Transactions() {
           value={q}
           onChange={(e) => setFilter(() => setQ(e.target.value))}
           placeholder="Search details, merchant, message…"
-          className="min-w-50 flex-1 rounded border border-slate-300 px-3 py-1.5 text-sm"
+          className="min-w-50 flex-1 rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
         />
         <input
           type="month"
           value={month}
           onChange={(e) => setFilter(() => setMonth(e.target.value))}
-          className="rounded border border-slate-300 px-3 py-1.5 text-sm"
+          className="rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
         />
         <select
           value={category}
           onChange={(e) => setFilter(() => setCategory(e.target.value))}
-          className="rounded border border-slate-300 px-3 py-1.5 text-sm"
+          className="rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
         >
           <option value="">All categories</option>
           <option value="none">Uncategorized</option>
@@ -100,7 +100,7 @@ export default function Transactions() {
         <select
           value={status}
           onChange={(e) => setFilter(() => setStatus(e.target.value))}
-          className="rounded border border-slate-300 px-3 py-1.5 text-sm"
+          className="rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
         >
           <option value="">All statuses</option>
           <option value="accepted">Accepted</option>
@@ -108,11 +108,11 @@ export default function Transactions() {
         </select>
       </div>
 
-      {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>}
 
-      <div className="overflow-x-auto rounded border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-slate-500">
+          <thead className="bg-slate-50 text-left text-slate-500 dark:bg-slate-800 dark:text-slate-400">
             <tr>
               <SortTh col="date">Date</SortTh>
               <SortTh col="counterparty">Merchant / details</SortTh>
@@ -125,15 +125,20 @@ export default function Transactions() {
               <tr
                 key={t.id}
                 onClick={() => setSelectedTx(t)}
-                className={`cursor-pointer border-t border-slate-100 hover:bg-slate-50 ${t.status === 'rejected' ? 'bg-slate-50 text-slate-400' : ''}`}
+                className={`cursor-pointer border-t border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800 ${t.status === 'rejected' ? 'bg-slate-50 text-slate-400 dark:bg-slate-800/60' : ''}`}
               >
                 <td className="whitespace-nowrap px-3 py-2 align-top">{shortDate(t.execution_date)}</td>
                 <td className="px-3 py-2 align-top">
                   <div className="font-medium">
                     {t.counterparty_name || t.transaction_type}
                     {t.status === 'rejected' && (
-                      <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700">
+                      <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900 dark:text-red-300">
                         rejected
+                      </span>
+                    )}
+                    {t.known_account_name && (
+                      <span className="ml-2 rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                        {t.known_account_name}
                       </span>
                     )}
                   </div>
@@ -144,7 +149,7 @@ export default function Transactions() {
                     value={t.category_id ?? ''}
                     onChange={(e) => assign(t.id, e.target.value ? Number(e.target.value) : null)}
                     onClick={(e) => e.stopPropagation()}
-                    className="max-w-40 rounded border border-slate-200 px-2 py-1 text-sm"
+                    className="max-w-40 rounded border border-slate-200 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   >
                     <option value="">— uncategorized —</option>
                     {categories.map((c) => (
@@ -156,7 +161,7 @@ export default function Transactions() {
                 </td>
                 <td
                   className={`whitespace-nowrap px-3 py-2 text-right align-top font-medium ${
-                    t.status === 'rejected' ? '' : t.amount_cents < 0 ? 'text-slate-900' : 'text-green-700'
+                    t.status === 'rejected' ? '' : t.amount_cents < 0 ? 'text-slate-900 dark:text-slate-100' : 'text-green-700'
                   }`}
                 >
                   {euros(t.amount_cents)}
@@ -175,13 +180,13 @@ export default function Transactions() {
       </div>
 
       {data && (
-        <div className="flex items-center justify-between text-sm text-slate-500">
+        <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
           <span>{data.total} transactions</span>
           <div className="flex items-center gap-2">
             <button
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
-              className="rounded border border-slate-300 px-2 py-1 disabled:opacity-40"
+              className="rounded border border-slate-300 px-2 py-1 disabled:opacity-40 dark:border-slate-600 dark:text-slate-300"
             >
               Prev
             </button>
@@ -191,7 +196,7 @@ export default function Transactions() {
             <button
               disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
-              className="rounded border border-slate-300 px-2 py-1 disabled:opacity-40"
+              className="rounded border border-slate-300 px-2 py-1 disabled:opacity-40 dark:border-slate-600 dark:text-slate-300"
             >
               Next
             </button>

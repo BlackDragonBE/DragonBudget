@@ -57,6 +57,13 @@ export interface Tx {
   category_name: string | null;
   category_icon: string | null;
   category_color: string | null;
+  known_account_name: string | null;
+}
+
+export interface KnownAccount {
+  id: number;
+  name: string;
+  account_number: string;
 }
 
 export interface TxPage {

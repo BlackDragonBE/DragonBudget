@@ -35,13 +35,13 @@ export default function Dashboard() {
           type="month"
           value={month}
           onChange={(e) => { localStorage.setItem('dashboard-month', e.target.value); setMonth(e.target.value); }}
-          className="rounded border border-slate-300 px-3 py-1.5 text-sm"
+          className="rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
         />
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Stat label="Income" value={euros(report?.income_cents ?? 0)} tone="text-green-700" />
-        <Stat label="Expenses" value={euros(Math.abs(report?.expense_cents ?? 0))} tone="text-slate-900" />
+        <Stat label="Expenses" value={euros(Math.abs(report?.expense_cents ?? 0))} tone="text-slate-900 dark:text-slate-100" />
         <Stat
           label="Net"
           value={euros(report?.net_cents ?? 0)}
@@ -49,8 +49,8 @@ export default function Dashboard() {
         />
       </div>
 
-      <section className="rounded border border-slate-200 bg-white p-4">
-        <h3 className="mb-3 text-sm font-medium text-slate-600">Income by category</h3>
+      <section className="rounded border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h3 className="mb-3 text-sm font-medium text-slate-600 dark:text-slate-400">Income by category</h3>
         {incomeCats.length === 0 && <p className="text-sm text-slate-400">No income this month.</p>}
         <div className="space-y-2">
           {incomeCats.map((c) => {
@@ -61,13 +61,13 @@ export default function Dashboard() {
               <Link
                 key={c.category_id}
                 to={`/transactions?month=${month}&category_id=${target}&direction=income`}
-                className="-mx-1 block rounded px-1 text-sm hover:bg-slate-50"
+                className="-mx-1 block rounded px-1 text-sm hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 <div className="flex justify-between">
                   <span>{c.icon} {c.name} <span className="text-slate-400">· {c.txn_count}</span></span>
                   <span className="font-medium">{euros(amount)}</span>
                 </div>
-                <div className="mt-1 h-2 w-full overflow-hidden rounded bg-slate-100">
+                <div className="mt-1 h-2 w-full overflow-hidden rounded bg-slate-100 dark:bg-slate-800">
                   <div
                     className="h-full rounded"
                     style={{ width: `${pct}%`, backgroundColor: c.color ?? '#16a34a' }}
@@ -79,8 +79,8 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <section className="rounded border border-slate-200 bg-white p-4">
-        <h3 className="mb-3 text-sm font-medium text-slate-600">Spending by category</h3>
+      <section className="rounded border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h3 className="mb-3 text-sm font-medium text-slate-600 dark:text-slate-400">Spending by category</h3>
         {expenseCats.length === 0 && <p className="text-sm text-slate-400">No spending this month.</p>}
         <div className="space-y-2">
           {expenseCats.map((c) => {
@@ -93,7 +93,7 @@ export default function Dashboard() {
               <Link
                 key={c.category_id}
                 to={`/transactions?month=${month}&category_id=${target}&direction=expense`}
-                className="-mx-1 block rounded px-1 text-sm hover:bg-slate-50"
+                className="-mx-1 block rounded px-1 text-sm hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 <div className="flex justify-between">
                   <span>{c.icon} {c.name} <span className="text-slate-400">· {c.txn_count}</span></span>
@@ -102,32 +102,32 @@ export default function Dashboard() {
                     {limit != null && <span className="font-normal text-slate-400"> / {euros(limit)}</span>}
                   </span>
                 </div>
-                <div className="mt-1 h-2 w-full overflow-hidden rounded bg-slate-100">
+                <div className="mt-1 h-2 w-full overflow-hidden rounded bg-slate-100 dark:bg-slate-800">
                   <div
                     className="h-full rounded"
                     style={{ width: `${pct}%`, backgroundColor: over ? '#dc2626' : c.color ?? '#64748b' }}
                   />
                 </div>
-                {over && <div className="mt-0.5 text-xs text-red-600">Over budget by {euros(amount - limit!)}</div>}
+                {over && <div className="mt-0.5 text-xs text-red-600 dark:text-red-400">Over budget by {euros(amount - limit!)}</div>}
               </Link>
             );
           })}
         </div>
       </section>
 
-      <section className="rounded border border-slate-200 bg-white p-4">
-        <h3 className="mb-3 text-sm font-medium text-slate-600">
+      <section className="rounded border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h3 className="mb-3 text-sm font-medium text-slate-600 dark:text-slate-400">
           Uncategorized this month {report ? `(${report.uncategorized.length})` : ''}
         </h3>
         {report && report.uncategorized.length === 0 && (
           <p className="text-sm text-slate-400">All transactions categorized 🎉</p>
         )}
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-slate-100 dark:divide-slate-800">
           {report?.uncategorized.map((t) => (
             <div key={t.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
               <button
                 onClick={() => setSelectedTx(t)}
-                className="w-24 shrink-0 text-left text-slate-400 hover:text-slate-700"
+                className="w-24 shrink-0 text-left text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
               >{t.execution_date}</button>
               <button
                 onClick={() => setSelectedTx(t)}
@@ -137,7 +137,7 @@ export default function Dashboard() {
               <select
                 defaultValue=""
                 onChange={(e) => assign(t.id, e.target.value ? Number(e.target.value) : null)}
-                className="rounded border border-slate-200 px-2 py-1 text-sm"
+                className="rounded border border-slate-200 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               >
                 <option value="">Categorize…</option>
                 {categories.map((c) => (
@@ -155,7 +155,7 @@ export default function Dashboard() {
 
 function Stat({ label, value, tone }: { label: string; value: string; tone: string }) {
   return (
-    <div className="rounded border border-slate-200 bg-white p-4">
+    <div className="rounded border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
       <div className="text-xs uppercase tracking-wide text-slate-400">{label}</div>
       <div className={`mt-1 text-2xl font-semibold ${tone}`}>{value}</div>
     </div>

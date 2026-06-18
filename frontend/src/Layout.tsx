@@ -21,8 +21,8 @@ export default function Layout({ authRequired = false }: { authRequired?: boolea
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="border-b bg-white">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <header className="border-b bg-white dark:bg-slate-900 dark:border-slate-700">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
           <span className="text-lg font-semibold">🐉 DragonBudget</span>
           <nav className="flex flex-wrap gap-1">
@@ -32,7 +32,7 @@ export default function Layout({ authRequired = false }: { authRequired?: boolea
                 to={n.to}
                 className={({ isActive }) =>
                   `rounded px-3 py-1.5 text-sm font-medium ${
-                    isActive ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
+                    isActive ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
                   }`
                 }
               >
@@ -41,7 +41,7 @@ export default function Layout({ authRequired = false }: { authRequired?: boolea
             ))}
           </nav>
           {authRequired && (
-            <button onClick={logout} className="ml-auto text-sm text-slate-500 hover:text-slate-900">
+            <button onClick={logout} className="ml-auto text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
               Log out
             </button>
           )}
