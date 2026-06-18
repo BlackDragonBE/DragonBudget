@@ -14,6 +14,18 @@ const TX_SELECT = `
 
 const getTx = (id: number) => db.prepare(`${TX_SELECT} WHERE t.id = ?`).get(id);
 
+// Whitelist sort/order query params to safe SQL fragments (raw string-interpolated
+// into ORDER BY, so an unknown sort MUST fall back, never echo user input).
+const SORT_COLS: Record<string, string> = {
+  date: 't.execution_date', amount: 't.amount_cents', counterparty: 't.counterparty_name',
+};
+export function resolveSort(query: { sort?: unknown; order?: unknown }): { col: string; dir: 'ASC' | 'DESC' } {
+  return {
+    col: SORT_COLS[String(query.sort ?? '')] ?? 't.execution_date',
+    dir: query.order === 'asc' ? 'ASC' : 'DESC',
+  };
+}
+
 // GET /api/transactions?month=&category_id=&status=&q=&direction=&page=
 // month filters on execution_date (YYYY-MM). category_id='none' => uncategorized.
 // direction='income' => amount_cents > 0, 'expense' => amount_cents < 0.
@@ -49,11 +61,13 @@ transactionsRouter.get('/', (req, res) => {
   const page = Math.max(1, Number(req.query.page) || 1);
   const offset = (page - 1) * PAGE_SIZE;
 
+  const { col: sortCol, dir: sortDir } = resolveSort(req.query);
+
   const total = (db.prepare(`SELECT COUNT(*) AS n FROM transactions t ${whereSql}`).get(...params) as { n: number }).n;
   const transactions = db.prepare(`
     ${TX_SELECT}
     ${whereSql}
-    ORDER BY t.execution_date DESC, t.id DESC
+    ORDER BY ${sortCol} ${sortDir}, t.id ${sortDir}
     LIMIT ? OFFSET ?
   `).all(...params, PAGE_SIZE, offset);
 

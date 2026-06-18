@@ -14,6 +14,8 @@ export default function Transactions() {
   const [status, setStatus] = useState(() => sp.get('status') ?? '');
   const [category, setCategory] = useState(() => sp.get('category_id') ?? '');
   const [direction] = useState(() => sp.get('direction') ?? '');
+  const [sort, setSort] = useState('date');
+  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
   const [data, setData] = useState<TxPage | null>(null);
   const [error, setError] = useState('');
@@ -31,9 +33,11 @@ export default function Transactions() {
     if (status) params.set('status', status);
     if (category) params.set('category_id', category);
     if (direction) params.set('direction', direction);
+    params.set('sort', sort);
+    params.set('order', order);
     params.set('page', String(page));
     api<TxPage>(`/transactions?${params}`).then(setData).catch((e) => setError(e.message));
-  }, [q, month, status, category, direction, page]);
+  }, [q, month, status, category, direction, sort, order, page]);
 
   async function assign(txId: number, categoryId: number | null) {
     const updated = await api<Tx>(`/transactions/${txId}`, {
@@ -44,6 +48,24 @@ export default function Transactions() {
   }
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
+
+  function toggleSort(col: string) {
+    if (sort === col) setOrder((o) => (o === 'desc' ? 'asc' : 'desc'));
+    else { setSort(col); setOrder('desc'); }
+    setPage(1);
+  }
+  function SortTh({ col, children, right }: { col: string; children: React.ReactNode; right?: boolean }) {
+    const active = sort === col;
+    const arrow = active ? (order === 'desc' ? ' ↓' : ' ↑') : '';
+    return (
+      <th
+        onClick={() => toggleSort(col)}
+        className={`cursor-pointer select-none px-3 py-2 font-medium hover:text-slate-700${right ? ' text-right' : ''}`}
+      >
+        {children}{arrow && <span className="text-slate-400">{arrow}</span>}
+      </th>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -92,10 +114,10 @@ export default function Transactions() {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left text-slate-500">
             <tr>
-              <th className="px-3 py-2 font-medium">Date</th>
-              <th className="px-3 py-2 font-medium">Merchant / details</th>
+              <SortTh col="date">Date</SortTh>
+              <SortTh col="counterparty">Merchant / details</SortTh>
               <th className="px-3 py-2 font-medium">Category</th>
-              <th className="px-3 py-2 text-right font-medium">Amount</th>
+              <SortTh col="amount" right>Amount</SortTh>
             </tr>
           </thead>
           <tbody>
