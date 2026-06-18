@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { euros, shortDate } from '../format';
 import { useCategories } from '../useCategories';
@@ -6,10 +7,11 @@ import type { Tx, TxPage } from '../types';
 
 export default function Transactions() {
   const { categories } = useCategories();
-  const [q, setQ] = useState('');
-  const [month, setMonth] = useState('');
-  const [status, setStatus] = useState('');
-  const [category, setCategory] = useState('');
+  const [sp] = useSearchParams();
+  const [q, setQ] = useState(() => sp.get('q') ?? '');
+  const [month, setMonth] = useState(() => sp.get('month') ?? '');
+  const [status, setStatus] = useState(() => sp.get('status') ?? '');
+  const [category, setCategory] = useState(() => sp.get('category_id') ?? '');
   const [page, setPage] = useState(1);
   const [data, setData] = useState<TxPage | null>(null);
   const [error, setError] = useState('');

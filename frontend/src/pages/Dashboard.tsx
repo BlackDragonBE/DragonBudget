@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { euros } from '../format';
 import { useCategories } from '../useCategories';
@@ -53,8 +54,13 @@ export default function Dashboard() {
           {incomeCats.map((c) => {
             const amount = c.spent_cents;
             const pct = (amount / maxIncome) * 100;
+            const target = c.category_id === -1 ? 'none' : c.category_id;
             return (
-              <div key={c.category_id} className="text-sm">
+              <Link
+                key={c.category_id}
+                to={`/transactions?month=${month}&category_id=${target}`}
+                className="-mx-1 block rounded px-1 text-sm hover:bg-slate-50"
+              >
                 <div className="flex justify-between">
                   <span>{c.icon} {c.name} <span className="text-slate-400">· {c.txn_count}</span></span>
                   <span className="font-medium">{euros(amount)}</span>
@@ -65,7 +71,7 @@ export default function Dashboard() {
                     style={{ width: `${pct}%`, backgroundColor: c.color ?? '#16a34a' }}
                   />
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
@@ -80,8 +86,13 @@ export default function Dashboard() {
             const limit = c.limit_cents ?? null;
             const over = limit != null && amount > limit;
             const pct = limit != null ? Math.min(100, (amount / limit) * 100) : (amount / maxSpend) * 100;
+            const target = c.category_id === -1 ? 'none' : c.category_id;
             return (
-              <div key={c.category_id} className="text-sm">
+              <Link
+                key={c.category_id}
+                to={`/transactions?month=${month}&category_id=${target}`}
+                className="-mx-1 block rounded px-1 text-sm hover:bg-slate-50"
+              >
                 <div className="flex justify-between">
                   <span>{c.icon} {c.name} <span className="text-slate-400">· {c.txn_count}</span></span>
                   <span className="font-medium">
@@ -96,7 +107,7 @@ export default function Dashboard() {
                   />
                 </div>
                 {over && <div className="mt-0.5 text-xs text-red-600">Over budget by {euros(amount - limit!)}</div>}
-              </div>
+              </Link>
             );
           })}
         </div>
