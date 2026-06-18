@@ -1,0 +1,20 @@
+services:
+  budgeting-app:
+    image: ghcr.io/blackdragonbe/dragonbudget:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+    environment:
+      - APP_PASSWORD=${APP_PASSWORD}
+      - SESSION_SECRET=${SESSION_SECRET}
+    restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 300 --cleanup
+    restart: unless-stopped
