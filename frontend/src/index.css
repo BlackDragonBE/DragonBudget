@@ -5,3 +5,24 @@
 :root {
   color-scheme: light dark;
 }
+
+/* Markdown prose styles for the Help page */
+.help-prose h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 1rem; }
+.help-prose h2 { font-size: 1.125rem; font-weight: 600; margin: 2rem 0 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--prose-border, #e2e8f0); }
+.help-prose h3 { font-size: 1rem; font-weight: 600; margin: 1.25rem 0 0.25rem; }
+.help-prose p { margin: 0.75rem 0; line-height: 1.7; }
+.help-prose ul { margin: 0.75rem 0; padding-left: 1.5rem; list-style: disc; }
+.help-prose ol { margin: 0.75rem 0; padding-left: 1.5rem; list-style: decimal; }
+.help-prose li { margin: 0.25rem 0; line-height: 1.6; }
+.help-prose code { font-family: ui-monospace, monospace; font-size: 0.875em; background: var(--prose-code-bg, #f1f5f9); padding: 0.1em 0.35em; border-radius: 0.25rem; }
+.help-prose pre { background: var(--prose-code-bg, #f1f5f9); padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 1rem 0; }
+.help-prose pre code { background: none; padding: 0; }
+.help-prose table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+.help-prose th { text-align: left; font-weight: 600; padding: 0.5rem 0.75rem; border-bottom: 2px solid var(--prose-border, #e2e8f0); }
+.help-prose td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--prose-border, #e2e8f0); vertical-align: top; }
+.help-prose a { color: #3b82f6; text-decoration: underline; }
+.help-prose strong { font-weight: 600; }
+.help-prose blockquote { border-left: 3px solid var(--prose-border, #e2e8f0); padding-left: 1rem; color: #64748b; margin: 1rem 0; }
+
+.dark .help-prose { --prose-border: #334155; --prose-code-bg: #1e293b; }
+.dark .help-prose blockquote { color: #94a3b8; }

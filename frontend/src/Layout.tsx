@@ -12,6 +12,7 @@ const NAV = [
   { to: '/recurring', label: 'Recurring' },
   { to: '/import', label: 'Import' },
   { to: '/settings', label: 'Settings' },
+  { to: '/help', label: 'Help' },
 ];
 
 export default function Layout({ authRequired = false }: { authRequired?: boolean }) {
