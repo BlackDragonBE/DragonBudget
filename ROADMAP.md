@@ -64,6 +64,16 @@ schema:
 - Average daily spend, days-remaining burn rate vs budget.
 - Income vs expense vs net summary tiles (some exist — round out).
 
+### 1.5 Internal-transfer detection / exclusion
+You have `known_accounts`. Auto-flag transfers between your own accounts so
+moving money to savings doesn't read as income+expense. Low cost given the
+infrastructure already exists; the payoff — clean income/expense totals — is
+immediate. "Moving money to savings looks like income + expense" quietly erodes
+trust in every other number the app shows.
+- **Touchpoints:** match `counterparty_account` against `known_accounts`;
+  treat as a transfer (new status or a `is_transfer` flag) excluded from
+  income/expense totals but still listed.
+
 ### 1.4 Split transactions
 One transaction split across categories (the supermarket run that's groceries
 + household + wine). Common real need; the only Tier-1 item needing schema.
@@ -77,23 +87,16 @@ One transaction split across categories (the supermarket run that's groceries
 
 ## Tier 2 — strong follow-ups
 
-### 2.1 Internal-transfer detection / exclusion
-You have `known_accounts`. Auto-flag transfers between your own accounts so
-moving money to savings doesn't read as income+expense. Excluded from totals
-like `status='rejected'` already is.
-- **Touchpoints:** match `counterparty_account` against `known_accounts`;
-  treat as a transfer (new status or a `is_transfer` flag) excluded from
-  income/expense totals but still listed.
-
-### 2.2 Savings goals
+### 2.1 Savings goals
 Target amount + optional target date + progress bar. Maps cleanly onto a
 sinking-fund category once 1.1 exists — a goal is "rollover category + a
 target." Build *after* rollover or it's redundant.
 
-### 2.3 Notes & tags on transactions
-Free-text note + lightweight tags (`vacation`, `car-2026`) for slicing across
-categories. One `tags` + `transaction_tags` table, or a simple `notes` TEXT
-column first (notes alone may be enough — add tags only if you reach for them).
+### 2.2 Notes on transactions (tags later, maybe never)
+A single `notes TEXT` column on `transactions` covers 90% of the use case with
+one migration line. Tags add a junction table, tag-management UI, and filter
+logic — real complexity for marginal gain. Add the `notes` column; add tags
+only if you find yourself typing structured tags into the note field.
 
 ### 2.4 PWA / installable mobile
 A `manifest.webmanifest` is already committed. Finish it: installable to home
@@ -122,20 +125,23 @@ for spreadsheet users. Near-trivial.
 - **AI auto-categorization** — your rules + suggestions already cover this
   deterministically and debuggably. An LLM here adds cost and nondeterminism
   for marginal gain.
-- **Undo system** — nice in theory, but JSON backup + the fact that re-import
-  is idempotent already covers "I messed up." Add only if a destructive action
-  proves painful.
+- **Undo system** — "re-import is idempotent" covers import mistakes, but an
+  accidental bulk-categorize or wrong delete has no recovery path short of
+  restoring a backup. A session-level in-memory undo stack for the last 5
+  mutating actions would be low-cost insurance. Skip until a destructive action
+  actually stings — but the threshold to add it is lower than the others here.
 
 ---
 
 ## Recommended order
 
-1. **Budget rollover (1.1)** — biggest single leap in usefulness.
+1. **Budget rollover (1.1)** — biggest single leap in usefulness. ✓ DONE
 2. **Cash-flow forecast (1.2)** — high value, you're already most of the way.
 3. **Insights (1.3)** — cheap wins on data you already have.
-4. Then pick from Tier 2 by what you actually find yourself wanting.
+4. **Transfer detection (1.5)** — cleans income/expense totals; low cost.
+5. Then pick from Tier 2 by what you actually find yourself wanting.
 
-Split transactions, goals, and tags are all "build when it bites" — don't
+Split transactions, goals, and notes are all "build when it bites" — don't
 pre-build them.
 
 ## Sources
