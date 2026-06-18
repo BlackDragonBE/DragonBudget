@@ -65,6 +65,13 @@ one file alongside your existing backup routine.
 **Loading transactions:** open the app → **Import** → upload a BNP Paribas Fortis CSV
 export. Re-importing overlapping date ranges is safe — duplicates are skipped.
 
+**Sinking funds:** on the Budgets page, click the `↺` icon next to any expense category
+to enable rollover. Unspent budget accumulates month to month — useful for infrequent
+large bills (car service, insurance, annual subscriptions). The progress bar and
+over-budget warning compare against the total available amount (this month's limit plus
+everything carried forward), and a `↪ +€X carried` annotation shows the accumulated
+amount.
+
 **Access control on a home server:** Tailscale network membership keeps the public
 internet out; the `APP_PASSWORD` gate covers anyone else on your tailnet.
 

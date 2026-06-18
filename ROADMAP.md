@@ -32,7 +32,7 @@ Recurring themes across YNAB, Actual Budget, and Lunch Money reviews:
 
 ## Tier 1 — build these (high value, fits the architecture)
 
-### 1.1 Budget rollover (sinking funds) — **the headline**
+### 1.1 Budget rollover (sinking funds) — **the headline** > DONE
 Unspent (or overspent) budget carries into next month:
 `available = limit + carried_over`, `carried_over = prev_available − prev_spent`.
 Turns the app from "spending tracker with monthly limits" into a real

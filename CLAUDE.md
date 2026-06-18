@@ -68,6 +68,15 @@ a manual categorization reveals a repeated token.
 category-trends), wrapped by thin handlers in `routes/reports.ts`. Recurring detection
 lives in `recurring/detect.ts`.
 
+**Sinking funds (rollover).** Categories have a `rollover` boolean (default off). When
+on, `monthReport` calls `carryover(db, categoryId, month)` — a pure function that sums
+all prior `budgets.limit_cents` minus all prior `transactions.amount_cents` for that
+category, anchored at the category's first budget month. The result is added to the
+current month's limit to produce `available_cents`, which the frontend uses for the
+progress bar and over-budget logic. The N+1 per rollover category is intentional and
+cheap on local SQLite. `carried_in_cents` is signed: overspend carries forward as
+negative. Non-rollover categories never get `carried_in_cents` / `available_cents`.
+
 **Routes**: `routes/index.ts` mounts every resource router under a single
 `requireAuth`-gated `/api` router; auth routes (`/api/auth/*`) and `/api/health` are
 mounted before the gate so login is reachable.
