@@ -98,6 +98,20 @@ function CategoryRow({ category, onChange }: { category: Category; onChange: () 
       >
         {archived ? 'Restore' : 'Archive'}
       </button>
+      <button
+        onClick={async () => {
+          if (!confirm(`Permanently delete "${category.name}"?`)) return;
+          try {
+            await api(`/categories/${category.id}`, { method: 'DELETE' });
+            onChange();
+          } catch (e) {
+            alert((e as Error).message);
+          }
+        }}
+        className="rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
+      >
+        Delete
+      </button>
     </div>
   );
 }

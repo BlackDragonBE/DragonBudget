@@ -72,10 +72,15 @@ categoriesRouter.patch('/:id', (req, res) => {
   res.json(getCategory(id));
 });
 
-// Soft delete (DESIGN.md §3.2) so historical transactions keep their label.
 categoriesRouter.delete('/:id', (req, res) => {
   const id = Number(req.params.id);
   if (!getCategory(id)) return res.status(404).json({ error: 'not found' });
-  db.prepare('UPDATE categories SET archived = 1 WHERE id = ?').run(id);
+  const { txn_count } = db.prepare(
+    `SELECT COUNT(*) AS txn_count FROM transactions WHERE category_id = ?`,
+  ).get(id) as { txn_count: number };
+  if (txn_count > 0) {
+    return res.status(409).json({ error: `Cannot delete: ${txn_count} transaction(s) use this category. Archive it instead.` });
+  }
+  db.prepare('DELETE FROM categories WHERE id = ?').run(id);
   res.status(204).end();
 });
