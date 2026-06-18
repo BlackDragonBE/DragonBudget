@@ -58,7 +58,7 @@ export default function Dashboard() {
             return (
               <Link
                 key={c.category_id}
-                to={`/transactions?month=${month}&category_id=${target}`}
+                to={`/transactions?month=${month}&category_id=${target}&direction=income`}
                 className="-mx-1 block rounded px-1 text-sm hover:bg-slate-50"
               >
                 <div className="flex justify-between">
@@ -90,7 +90,7 @@ export default function Dashboard() {
             return (
               <Link
                 key={c.category_id}
-                to={`/transactions?month=${month}&category_id=${target}`}
+                to={`/transactions?month=${month}&category_id=${target}&direction=expense`}
                 className="-mx-1 block rounded px-1 text-sm hover:bg-slate-50"
               >
                 <div className="flex justify-between">

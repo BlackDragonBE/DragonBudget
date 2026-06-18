@@ -14,8 +14,9 @@ const TX_SELECT = `
 
 const getTx = (id: number) => db.prepare(`${TX_SELECT} WHERE t.id = ?`).get(id);
 
-// GET /api/transactions?month=&category_id=&status=&q=&page=
+// GET /api/transactions?month=&category_id=&status=&q=&direction=&page=
 // month filters on execution_date (YYYY-MM). category_id='none' => uncategorized.
+// direction='income' => amount_cents > 0, 'expense' => amount_cents < 0.
 transactionsRouter.get('/', (req, res) => {
   const where: string[] = [];
   const params: (string | number)[] = [];
@@ -29,6 +30,10 @@ transactionsRouter.get('/', (req, res) => {
   const category = req.query.category_id ? String(req.query.category_id) : '';
   if (category === 'none') where.push('t.category_id IS NULL');
   else if (category) { where.push('t.category_id = ?'); params.push(Number(category)); }
+
+  const direction = req.query.direction ? String(req.query.direction) : '';
+  if (direction === 'income') where.push('t.amount_cents > 0');
+  else if (direction === 'expense') where.push('t.amount_cents < 0');
 
   const status = req.query.status ? String(req.query.status) : '';
   if (status === 'accepted' || status === 'rejected') { where.push('t.status = ?'); params.push(status); }
