@@ -30,7 +30,7 @@ export default function Transactions() {
   const [month, setMonth] = useState(init.month);
   const [status, setStatus] = useState(init.status);
   const [category, setCategory] = useState(init.category);
-  const [direction] = useState(init.direction);
+  const [direction, setDirection] = useState(init.direction);
   const [sort, setSort] = useState(init.sort);
   const [order, setOrder] = useState<'asc' | 'desc'>(init.order);
   const [page, setPage] = useState<number>(init.page);
@@ -40,6 +40,12 @@ export default function Transactions() {
 
   function setFilter(fn: () => void) {
     fn();
+    setPage(1);
+  }
+
+  const anyFilter = !!(q || month || status || category || direction);
+  function clearFilters() {
+    setQ(''); setMonth(''); setStatus(''); setCategory(''); setDirection('');
     setPage(1);
   }
 
@@ -119,6 +125,15 @@ export default function Transactions() {
           ))}
         </select>
         <select
+          value={direction}
+          onChange={(e) => setFilter(() => setDirection(e.target.value))}
+          className="rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+        >
+          <option value="">Income & expense</option>
+          <option value="income">Income only</option>
+          <option value="expense">Expense only</option>
+        </select>
+        <select
           value={status}
           onChange={(e) => setFilter(() => setStatus(e.target.value))}
           className="rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
@@ -127,6 +142,14 @@ export default function Transactions() {
           <option value="accepted">Accepted</option>
           <option value="rejected">Rejected</option>
         </select>
+        {anyFilter && (
+          <button
+            onClick={clearFilters}
+            className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
       {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>}

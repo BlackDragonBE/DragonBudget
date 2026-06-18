@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db';
-import { monthReport, balanceHistory, categoryTrends, upcomingRecurring } from '../reports';
+import { monthReport, balanceHistory, categoryTrends, upcomingRecurring, insights } from '../reports';
 
 export const reportsRouter = Router();
 
@@ -26,6 +26,13 @@ reportsRouter.get('/upcoming', (req, res) => {
   const month = String(req.query.month ?? '');
   if (!MONTH.test(month)) return res.status(400).json({ error: 'month must be YYYY-MM' });
   res.json(upcomingRecurring(db, month));
+});
+
+// GET /api/reports/insights?month=YYYY-MM
+reportsRouter.get('/insights', (req, res) => {
+  const month = String(req.query.month ?? '');
+  if (!MONTH.test(month)) return res.status(400).json({ error: 'month must be YYYY-MM' });
+  res.json(insights(db, month, new Date().toISOString().slice(0, 10)));
 });
 
 // GET /api/reports/balance-history?from=YYYY-MM-DD&to=YYYY-MM-DD&start_cents=&current_cents=

@@ -47,7 +47,7 @@ insurance bill).
   rollover math lives in `reports.ts` month report (running carry per
   category). No new table. Display: "available" alongside "spent / limit".
 
-### 1.2 Cash-flow forecast from recurring expenses
+### 1.2 Cash-flow forecast from recurring expenses > DONE
 You already *detect* recurring expenses — surface them forward. A timeline /
 calendar of upcoming charges this month + "projected end-of-month balance =
 current balance − remaining expected recurring." This is Lunch Money's most
@@ -56,7 +56,7 @@ praised feature and you're 80% there with `recurring_expenses.next_expected_date
   with `next_expected_date` in range, minus ones already matched this period);
   small panel on the Dashboard. No schema change.
 
-### 1.3 Richer insights on existing data
+### 1.3 Richer insights on existing data > DONE
 All pure query functions in the `reports.ts` pattern — cheap, high ROI, no
 schema:
 - Month-over-month per-category delta ("Dining ▲ €42 vs last month").
@@ -64,7 +64,7 @@ schema:
 - Average daily spend, days-remaining burn rate vs budget.
 - Income vs expense vs net summary tiles (some exist — round out).
 
-### 1.5 Internal-transfer detection / exclusion
+### 1.4 Internal-transfer detection / exclusion
 You have `known_accounts`. Auto-flag transfers between your own accounts so
 moving money to savings doesn't read as income+expense. Low cost given the
 infrastructure already exists; the payoff — clean income/expense totals — is
@@ -74,7 +74,7 @@ trust in every other number the app shows.
   treat as a transfer (new status or a `is_transfer` flag) excluded from
   income/expense totals but still listed.
 
-### 1.4 Split transactions
+### 1.5 Split transactions
 One transaction split across categories (the supermarket run that's groceries
 + household + wine). Common real need; the only Tier-1 item needing schema.
 - **Touchpoints:** `transaction_splits(transaction_id, category_id, amount_cents)`;
@@ -137,7 +137,7 @@ for spreadsheet users. Near-trivial.
 
 1. **Budget rollover (1.1)** — biggest single leap in usefulness. ✓ DONE
 2. **Cash-flow forecast (1.2)** — high value, you're already most of the way.
-3. **Insights (1.3)** — cheap wins on data you already have.
+3. **Insights (1.3)** — cheap wins on data you already have. ✓ DONE
 4. **Transfer detection (1.5)** — cleans income/expense totals; low cost.
 5. Then pick from Tier 2 by what you actually find yourself wanting.
 

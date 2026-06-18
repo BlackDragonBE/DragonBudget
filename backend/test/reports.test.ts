@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createDb, type DB } from '../src/db';
-import { balanceHistory, upcomingRecurring } from '../src/reports';
+import { balanceHistory, upcomingRecurring, insights } from '../src/reports';
 
 test('balanceHistory with startCents', () => {
   const db = createDb(':memory:');
@@ -84,4 +84,45 @@ test('upcomingRecurring: excludes matched-this-month & dismissed, splits signs',
   assert.deepEqual((r.upcoming as { label: string }[]).map((u) => u.label).sort(), ['INSURANCE', 'SALARY']);
   assert.equal(r.expected_expense_cents, -3141);
   assert.equal(r.expected_income_cents, 250000);
+});
+
+// --- insights (roadmap 1.3) ---
+
+function addTx(db: DB, o: { date: string; amount: number; cat?: number }): void {
+  db.prepare(`INSERT INTO transactions
+      (import_hash, execution_date, value_date, amount_cents, account_number, transaction_type, details, status, created_at, category_id)
+      VALUES (?,?,?,?, 'a', 't', 'd', 'accepted', 't', ?)`)
+    .run(`i${++recHash}`, o.date, o.date, o.amount, o.cat ?? null);
+}
+
+test('insights: burn rate, MoM deltas, largest expenses', () => {
+  const db = createDb(':memory:');
+  const a = Number(db.prepare("INSERT INTO categories (name) VALUES ('A')").run().lastInsertRowid);
+  const b = Number(db.prepare("INSERT INTO categories (name) VALUES ('B')").run().lastInsertRowid);
+
+  addTx(db, { date: '2026-05-10', amount: -2000, cat: a }); // prev month A
+  addTx(db, { date: '2026-06-05', amount: -3000, cat: a }); // June A
+  addTx(db, { date: '2026-06-12', amount: -2000, cat: a }); // June A
+  addTx(db, { date: '2026-06-08', amount: -10000, cat: b }); // June B, largest
+
+  // 15 of 30 days elapsed; June expense total -15000.
+  const r = insights(db, '2026-06', '2026-06-15');
+  assert.equal(r.days_in_month, 30);
+  assert.equal(r.days_elapsed, 15);
+  assert.equal(r.expense_cents, -15000);
+  assert.equal(r.daily_avg_cents, -1000);
+  assert.equal(r.projected_expense_cents, -30000);
+
+  // Largest expense first.
+  assert.equal(r.top_expenses[0].amount_cents, -10000);
+  assert.equal(r.top_expenses.length, 3);
+
+  // B is up €100 (0 → -10000), A up €30 (-2000 → -5000); B sorts first by magnitude.
+  assert.deepEqual(r.category_deltas.map((d) => d.name), ['B', 'A']);
+  assert.equal(r.category_deltas.find((d) => d.name === 'A')!.delta_cents, -3000);
+
+  // Past month: elapsed == days_in_month, projected == actual.
+  const past = insights(db, '2026-05', '2026-06-15');
+  assert.equal(past.days_elapsed, 31);
+  assert.equal(past.projected_expense_cents, past.expense_cents);
 });

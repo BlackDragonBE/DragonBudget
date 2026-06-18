@@ -115,6 +115,27 @@ export interface UpcomingForecast {
   expected_expense_cents: number;
 }
 
+export interface Insights {
+  month: string;
+  days_in_month: number;
+  days_elapsed: number;
+  expense_cents: number;
+  daily_avg_cents: number;
+  projected_expense_cents: number;
+  budget_total_cents: number;
+  top_expenses: Tx[];
+  category_deltas: Array<{
+    category_id: number;
+    name: string;
+    icon: string | null;
+    color: string | null;
+    is_income: number;
+    spent_cents: number;
+    prev_cents: number;
+    delta_cents: number;
+  }>;
+}
+
 export interface BalancePoint {
   date: string;
   balance_cents: number;

@@ -169,6 +169,67 @@ export function upcomingRecurring(db: DB, month: string) {
   return { month, upcoming: rows, expected_income_cents, expected_expense_cents };
 }
 
+// Richer insights for a month (roadmap 1.3), all on existing data, no schema:
+// per-category month-over-month delta, largest expenses, and burn rate vs budget.
+// `today` (ISO YYYY-MM-DD) is injected so the function stays pure/testable; burn rate
+// degrades naturally for past months (elapsed == days_in_month → projected == actual).
+export function insights(db: DB, month: string, today: string) {
+  const prev = prevMonthOf(month);
+  const [y, mo] = month.split('-').map(Number);
+  const days_in_month = new Date(y, mo, 0).getDate();
+  const tMonth = today.slice(0, 7);
+  const days_elapsed = tMonth < month ? 0 : tMonth > month ? days_in_month : Number(today.slice(8, 10));
+
+  const expense = (db
+    .prepare("SELECT COALESCE(SUM(amount_cents), 0) AS s FROM transactions WHERE status = 'accepted' AND amount_cents < 0 AND substr(execution_date, 1, 7) = ?")
+    .get(month) as { s: number }).s;
+  const budget_total_cents = (db
+    .prepare("SELECT COALESCE(SUM(b.limit_cents), 0) AS s FROM budgets b JOIN categories c ON c.id = b.category_id WHERE b.month = ? AND c.is_income = 0")
+    .get(month) as { s: number }).s;
+
+  const daily_avg_cents = days_elapsed > 0 ? Math.round(expense / days_elapsed) : 0;
+  const projected_expense_cents = days_elapsed > 0 ? Math.round((expense / days_elapsed) * days_in_month) : expense;
+
+  const top_expenses = db
+    .prepare(`SELECT t.*, c.name AS category_name, c.icon AS category_icon, c.color AS category_color,
+                     ka.name AS known_account_name
+              FROM transactions t
+              LEFT JOIN categories c ON c.id = t.category_id
+              LEFT JOIN known_accounts ka ON REPLACE(t.counterparty_account, ' ', '') = ka.account_number
+              WHERE t.status = 'accepted' AND t.amount_cents < 0 AND substr(t.execution_date, 1, 7) = ?
+              ORDER BY t.amount_cents ASC LIMIT 5`)
+    .all(month);
+
+  const deltas = db
+    .prepare(`SELECT c.id AS category_id, c.name, c.icon, c.color, c.is_income,
+                     COALESCE(cur.s, 0) AS spent_cents, COALESCE(prv.s, 0) AS prev_cents
+              FROM categories c
+              LEFT JOIN (SELECT category_id, SUM(amount_cents) s FROM transactions
+                         WHERE status = 'accepted' AND substr(execution_date, 1, 7) = ? GROUP BY category_id) cur ON cur.category_id = c.id
+              LEFT JOIN (SELECT category_id, SUM(amount_cents) s FROM transactions
+                         WHERE status = 'accepted' AND substr(execution_date, 1, 7) = ? GROUP BY category_id) prv ON prv.category_id = c.id
+              WHERE c.archived = 0 AND (cur.s IS NOT NULL OR prv.s IS NOT NULL)`)
+    .all(month, prev) as { spent_cents: number; prev_cents: number }[];
+  // Top movers by absolute change in magnitude (works for both income and expense).
+  const category_deltas = deltas
+    .map((d) => ({ ...d, delta_cents: d.spent_cents - d.prev_cents }))
+    .sort((a, b) => Math.abs(Math.abs(b.spent_cents) - Math.abs(b.prev_cents)) - Math.abs(Math.abs(a.spent_cents) - Math.abs(a.prev_cents)))
+    .slice(0, 6);
+
+  return {
+    month, days_in_month, days_elapsed, expense_cents: expense,
+    daily_avg_cents, projected_expense_cents, budget_total_cents,
+    top_expenses, category_deltas,
+  };
+}
+
+// 'YYYY-MM' -> previous month 'YYYY-MM'. (Mirrors frontend format.ts:prevMonth.)
+function prevMonthOf(m: string): string {
+  const [y, mo] = m.split('-').map(Number);
+  const d = new Date(y, mo - 2, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
 // Per-category spending per month (DESIGN.md §7.2), pivoted for a stacked chart:
 // rows are { month, <CategoryName>: absCents }. isIncome=true flips to income categories.
 export function categoryTrends(db: DB, opts: { from?: string; to?: string; isIncome?: boolean } = {}) {

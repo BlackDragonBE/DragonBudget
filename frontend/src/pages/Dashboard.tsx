@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { euros } from '../format';
 import { useCategories } from '../useCategories';
-import type { MonthReport, Tx, UpcomingForecast } from '../types';
+import type { Insights, MonthReport, Tx, UpcomingForecast } from '../types';
 import { TxDetailModal } from '../components/TxDetailModal';
 
 const thisMonth = () => new Date().toISOString().slice(0, 7);
@@ -13,11 +13,13 @@ export default function Dashboard() {
   const [month, setMonth] = useState(() => localStorage.getItem('dashboard-month') ?? thisMonth());
   const [report, setReport] = useState<MonthReport | null>(null);
   const [forecast, setForecast] = useState<UpcomingForecast | null>(null);
+  const [insights, setInsights] = useState<Insights | null>(null);
   const [selectedTx, setSelectedTx] = useState<Tx | null>(null);
 
   const load = () => {
     api<MonthReport>(`/reports/month?month=${month}`).then(setReport);
     api<UpcomingForecast>(`/reports/upcoming?month=${month}`).then(setForecast);
+    api<Insights>(`/reports/insights?month=${month}`).then(setInsights);
   };
   useEffect(() => { load(); }, [month]);
 
@@ -120,6 +122,75 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {insights && (insights.expense_cents < 0 || insights.category_deltas.length > 0) && (
+        <section className="rounded border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+          <h3 className="mb-3 text-sm font-medium text-slate-600 dark:text-slate-400">Insights</h3>
+
+          {insights.expense_cents < 0 && (
+            <div className="text-sm">
+              <span className="text-slate-500 dark:text-slate-400">
+                {euros(Math.abs(insights.daily_avg_cents))}/day over {insights.days_elapsed} day{insights.days_elapsed === 1 ? '' : 's'}
+              </span>
+              {insights.days_elapsed < insights.days_in_month && (
+                <>
+                  {' · projected '}
+                  <span className="font-medium">{euros(Math.abs(insights.projected_expense_cents))}</span>
+                  {insights.budget_total_cents > 0 && (
+                    <span className={Math.abs(insights.projected_expense_cents) > insights.budget_total_cents ? 'text-red-600 dark:text-red-400' : 'text-green-700'}>
+                      {' '}/ {euros(insights.budget_total_cents)} budget
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {insights.category_deltas.length > 0 && (
+            <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800">
+              <div className="mb-2 text-xs uppercase tracking-wide text-slate-400">vs last month</div>
+              <div className="space-y-1">
+                {insights.category_deltas.map((d) => {
+                  const change = Math.abs(d.spent_cents) - Math.abs(d.prev_cents);
+                  if (change === 0) return null;
+                  const up = change > 0;
+                  // For expenses, spending more (up) is bad → red; for income, more is good → green.
+                  const bad = d.is_income ? !up : up;
+                  return (
+                    <div key={d.category_id} className="flex justify-between text-sm">
+                      <span>{d.icon} {d.name}</span>
+                      <span className={bad ? 'text-red-600 dark:text-red-400' : 'text-green-700'}>
+                        {up ? '▲' : '▼'} {euros(Math.abs(change))}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {insights.top_expenses.length > 0 && (
+            <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800">
+              <div className="mb-2 text-xs uppercase tracking-wide text-slate-400">Largest expenses</div>
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {insights.top_expenses.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setSelectedTx(t)}
+                    className="flex w-full flex-wrap items-center gap-2 py-1.5 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-800"
+                  >
+                    <span className="w-24 shrink-0 text-slate-400">{t.execution_date}</span>
+                    <span className="min-w-40 flex-1 truncate">
+                      {t.category_icon} {t.counterparty_name || t.details}
+                    </span>
+                    <span className="w-24 text-right font-medium">{euros(t.amount_cents)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
       <section className="rounded border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
         <h3 className="mb-3 text-sm font-medium text-slate-600 dark:text-slate-400">Upcoming this month</h3>
         {forecast && forecast.upcoming.length === 0 && (
@@ -127,13 +198,17 @@ export default function Dashboard() {
         )}
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
           {forecast?.upcoming.map((u) => (
-            <div key={u.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
+            <Link
+              key={u.id}
+              to="/recurring"
+              className="flex flex-wrap items-center gap-2 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800"
+            >
               <span className="w-24 shrink-0 text-slate-400">{u.next_expected_date ?? '—'}</span>
               <span className="min-w-40 flex-1 truncate">{u.category_icon} {u.label}</span>
               <span className={`w-24 text-right font-medium ${u.expected_amount_cents < 0 ? '' : 'text-green-700'}`}>
                 {euros(u.expected_amount_cents)}
               </span>
-            </div>
+            </Link>
           ))}
         </div>
         {forecast && forecast.upcoming.length > 0 && (
