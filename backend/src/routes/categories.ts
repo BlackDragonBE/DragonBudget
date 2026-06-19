@@ -10,7 +10,12 @@ const CategoryInput = z.object({
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'color must be a #RRGGBB hex').nullish(),
   is_income: z.boolean().optional(),
 });
-const CategoryPatch = CategoryInput.partial().extend({ archived: z.boolean().optional(), rollover: z.boolean().optional() });
+const CategoryPatch = CategoryInput.partial().extend({
+  archived: z.boolean().optional(),
+  rollover: z.boolean().optional(),
+  goal_cents: z.number().int().min(0).nullable().optional(),
+  goal_date: z.string().regex(/^\d{4}-\d{2}(-\d{2})?$/).nullable().optional(),
+});
 
 const getCategory = (id: number) => db.prepare('SELECT * FROM categories WHERE id = ?').get(id);
 
@@ -60,6 +65,8 @@ categoriesRouter.patch('/:id', (req, res) => {
   if (d.is_income !== undefined) { sets.push('is_income = ?'); vals.push(d.is_income ? 1 : 0); }
   if (d.archived !== undefined) { sets.push('archived = ?'); vals.push(d.archived ? 1 : 0); }
   if (d.rollover !== undefined) { sets.push('rollover = ?'); vals.push(d.rollover ? 1 : 0); }
+  if (d.goal_cents !== undefined) { sets.push('goal_cents = ?'); vals.push(d.goal_cents ?? null); }
+  if (d.goal_date !== undefined) { sets.push('goal_date = ?'); vals.push(d.goal_date ?? null); }
   if (!sets.length) return res.json(getCategory(id));
 
   try {

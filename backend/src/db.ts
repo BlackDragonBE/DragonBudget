@@ -17,6 +17,10 @@ export function createDb(file: string): DB {
   const catInfo = conn.prepare('PRAGMA table_info(categories)').all() as { name: string }[];
   if (!catInfo.some((c) => c.name === 'rollover'))
     conn.exec('ALTER TABLE categories ADD COLUMN rollover INTEGER NOT NULL DEFAULT 0');
+  if (!catInfo.some((c) => c.name === 'goal_cents'))
+    conn.exec('ALTER TABLE categories ADD COLUMN goal_cents INTEGER');
+  if (!catInfo.some((c) => c.name === 'goal_date'))
+    conn.exec('ALTER TABLE categories ADD COLUMN goal_date TEXT');
 
   // Migration: add match_type to rule_suggestions if missing (DESIGN.md §5.2 upgrade)
   const info = conn.prepare('PRAGMA table_info(rule_suggestions)').all() as { name: string }[];

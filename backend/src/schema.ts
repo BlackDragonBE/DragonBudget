@@ -6,9 +6,11 @@ CREATE TABLE IF NOT EXISTS categories (
   name      TEXT NOT NULL UNIQUE,
   icon      TEXT,
   color     TEXT,
-  is_income INTEGER NOT NULL DEFAULT 0,
-  archived  INTEGER NOT NULL DEFAULT 0,
-  rollover  INTEGER NOT NULL DEFAULT 0
+  is_income  INTEGER NOT NULL DEFAULT 0,
+  archived   INTEGER NOT NULL DEFAULT 0,
+  rollover   INTEGER NOT NULL DEFAULT 0,
+  goal_cents INTEGER,
+  goal_date  TEXT
 );
 
 CREATE TABLE IF NOT EXISTS transactions (

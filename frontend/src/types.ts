@@ -7,6 +7,8 @@ export interface Category {
   archived: number;
   rollover: number;
   txn_count: number;
+  goal_cents: number | null;
+  goal_date: string | null;
 }
 
 export interface Rule {
@@ -88,6 +90,8 @@ export interface CategorySpend {
   limit_cents?: number | null;
   carried_in_cents?: number | null;
   available_cents?: number | null;
+  goal_cents?: number | null;
+  goal_date?: string | null;
 }
 
 export interface MonthReport {
