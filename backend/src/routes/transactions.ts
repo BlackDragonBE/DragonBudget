@@ -90,9 +90,12 @@ transactionsRouter.get('/:id', (req, res) => {
   res.json(tx);
 });
 
-// PATCH /api/transactions/:id { category_id: number | null } — manual categorize.
-// Always sets category_source='manual' (rules never overwrite this; §5.1/§5.3).
-const PatchTx = z.object({ category_id: z.number().int().nullable() });
+// PATCH /api/transactions/:id — manual categorize and/or set a note.
+// category_id always sets category_source='manual' (rules never overwrite; §5.1/§5.3).
+const PatchTx = z.object({
+  category_id: z.number().int().nullable().optional(),
+  notes: z.string().max(1000).nullable().optional(),
+});
 
 transactionsRouter.patch('/:id', (req, res) => {
   const id = Number(req.params.id);
@@ -100,18 +103,25 @@ transactionsRouter.patch('/:id', (req, res) => {
     return res.status(404).json({ error: 'not found' });
   }
   const p = PatchTx.safeParse(req.body);
-  if (!p.success) return res.status(400).json({ error: 'category_id must be a number or null' });
+  if (!p.success) return res.status(400).json({ error: p.error.issues[0].message });
 
-  if (p.data.category_id === null) {
-    db.prepare('UPDATE transactions SET category_id = NULL, category_source = NULL WHERE id = ?').run(id);
-  } else {
-    if (!db.prepare('SELECT 1 FROM categories WHERE id = ?').get(p.data.category_id)) {
-      return res.status(400).json({ error: 'unknown category' });
+  if (p.data.category_id !== undefined) {
+    if (p.data.category_id === null) {
+      db.prepare('UPDATE transactions SET category_id = NULL, category_source = NULL WHERE id = ?').run(id);
+    } else {
+      if (!db.prepare('SELECT 1 FROM categories WHERE id = ?').get(p.data.category_id)) {
+        return res.status(400).json({ error: 'unknown category' });
+      }
+      db.prepare("UPDATE transactions SET category_id = ?, category_source = 'manual' WHERE id = ?").run(
+        p.data.category_id, id,
+      );
+      maybeSuggestRule(db, id); // §5.2: repeated merchant token → suggest a rule
     }
-    db.prepare("UPDATE transactions SET category_id = ?, category_source = 'manual' WHERE id = ?").run(
-      p.data.category_id, id,
-    );
-    maybeSuggestRule(db, id); // §5.2: repeated merchant token → suggest a rule
   }
+
+  if (p.data.notes !== undefined) {
+    db.prepare('UPDATE transactions SET notes = ? WHERE id = ?').run(p.data.notes ?? null, id);
+  }
+
   res.json(getTx(id));
 });

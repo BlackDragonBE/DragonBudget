@@ -32,6 +32,8 @@ export function createDb(file: string): DB {
   const txInfo = conn.prepare('PRAGMA table_info(transactions)').all() as { name: string }[];
   if (!txInfo.some((c) => c.name === 'is_transfer'))
     conn.exec('ALTER TABLE transactions ADD COLUMN is_transfer INTEGER NOT NULL DEFAULT 0');
+  if (!txInfo.some((c) => c.name === 'notes'))
+    conn.exec('ALTER TABLE transactions ADD COLUMN notes TEXT');
 
   // Migration: add is_own_account to known_accounts if missing (roadmap 1.4 refinement)
   const kaInfo = conn.prepare('PRAGMA table_info(known_accounts)').all() as { name: string }[];

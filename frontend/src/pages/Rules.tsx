@@ -128,7 +128,7 @@ export default function Rules() {
         );
       })()}
 
-      {selectedTx && <TxDetailModal tx={selectedTx} onClose={() => setSelectedTx(null)} />}
+      {selectedTx && <TxDetailModal tx={selectedTx} onClose={() => setSelectedTx(null)} onSaveNote={(n) => api(`/transactions/${selectedTx.id}`, { method: 'PATCH', body: JSON.stringify({ notes: n }) })} />}
     </div>
   );
 }

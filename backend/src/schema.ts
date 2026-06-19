@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   category_id          INTEGER REFERENCES categories(id),
   category_source      TEXT,
   is_transfer          INTEGER NOT NULL DEFAULT 0,
+  notes                TEXT,
   created_at           TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_tx_value_date ON transactions(value_date);

@@ -62,6 +62,7 @@ export interface Tx {
   category_color: string | null;
   known_account_name: string | null;
   is_transfer: number;
+  notes?: string | null;
 }
 
 export interface KnownAccount {
