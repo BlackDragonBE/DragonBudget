@@ -36,6 +36,7 @@ export function monthReport(db: DB, month: string) {
   const categories = db
     .prepare(`
       SELECT c.id AS category_id, c.name, c.icon, c.color, c.is_income, c.rollover,
+             c.goal_cents, c.goal_date,
              COALESCE(s.spent_cents, 0) AS spent_cents,
              COALESCE(s.txn_count, 0) AS txn_count,
              b.limit_cents

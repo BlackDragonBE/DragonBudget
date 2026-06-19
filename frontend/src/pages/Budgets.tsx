@@ -20,6 +20,16 @@ export default function Budgets() {
     load();
   }
 
+  async function setGoal(categoryId: number, euroStr: string, date: string | null | undefined) {
+    const goal_cents = euroStr ? Math.round((parseFloat(euroStr.replace(',', '.')) || 0) * 100) || null : null;
+    await api(`/categories/${categoryId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ goal_cents, goal_date: date || null }),
+    });
+    reload();
+    load();
+  }
+
   // category_id -> { spent_cents, limit_cents }
   const byCat = new Map(report?.categories.map((c) => [c.category_id, c]) ?? []);
   const expenseCategories = categories.filter((c) => !c.is_income);
@@ -135,8 +145,32 @@ export default function Budgets() {
             const rawPct = budget != null && budget > 0 ? (spent / budget) * 100 : 0;
             const pct = Math.min(100, rawPct);
             const carried = row?.carried_in_cents;
+
+            // Goal progress (only meaningful on rollover categories)
+            const goalCents = row?.goal_cents ?? c.goal_cents ?? null;
+            const goalDate = row?.goal_date ?? c.goal_date ?? null;
+            const savedCents = isRollover ? (row?.available_cents ?? 0) : 0;
+            const goalPct = goalCents && goalCents > 0 ? Math.min(100, (savedCents / goalCents) * 100) : null;
+            const goalOver = goalCents != null && savedCents >= goalCents;
+
+            let onTrackLabel: string | null = null;
+            if (goalCents && !goalOver && goalDate && isRollover) {
+              const [gy, gm] = goalDate.slice(0, 7).split('-').map(Number);
+              const [cy, cm] = month.split('-').map(Number);
+              const monthsLeft = (gy - cy) * 12 + (gm - cm);
+              if (monthsLeft > 0) {
+                const needed = Math.ceil((goalCents - savedCents) / monthsLeft);
+                const limit = row?.limit_cents ?? 0;
+                onTrackLabel = limit >= needed
+                  ? `On track for ${goalDate.slice(0, 7)}`
+                  : `Need ${euros(needed)}/mo for ${goalDate.slice(0, 7)}`;
+              } else if (monthsLeft === 0) {
+                onTrackLabel = 'Goal month reached';
+              }
+            }
+
             return (
-              <div key={c.id} className="flex items-center gap-2 px-3 py-2 text-sm">
+              <div key={c.id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
                 <Link to={`/transactions?month=${month}&category_id=${c.id}&direction=expense`} className="w-40 shrink-0 rounded hover:bg-slate-50 dark:hover:bg-slate-800">{c.icon} {c.name}</Link>
                 <div className="flex flex-1 flex-col gap-0.5">
                   <div className="flex items-center gap-1.5">
@@ -156,6 +190,22 @@ export default function Budgets() {
                     <span className={`text-xs ${carried > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
                       ↪ {carried > 0 ? '+' : ''}{euros(carried)} carried
                     </span>
+                  )}
+                  {goalCents != null && goalCents > 0 && isRollover && (
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-1.5 flex-1 rounded-full bg-slate-200 dark:bg-slate-700">
+                        <div
+                          className={`h-1.5 rounded-full transition-all ${goalOver ? 'bg-blue-500' : 'bg-sky-400'}`}
+                          style={{ width: `${goalPct ?? 0}%` }}
+                        />
+                      </div>
+                      <span className="w-12 text-right text-xs text-slate-400">
+                        {goalOver ? '✓ goal' : `${Math.round(goalPct ?? 0)}%`}
+                      </span>
+                    </div>
+                  )}
+                  {onTrackLabel && (
+                    <span className="text-xs text-sky-500 dark:text-sky-400">{onTrackLabel}</span>
                   )}
                 </div>
                 <span className={`w-24 text-right ${over ? 'font-semibold text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'}`}>
@@ -180,6 +230,28 @@ export default function Budgets() {
                     ↺
                   </button>
                 </div>
+                {isRollover && (
+                  <div className="flex w-full items-center gap-2 pl-[168px] text-xs text-slate-400">
+                    <span>Goal:</span>
+                    <input
+                      key={`goal-${c.id}-${report ? 'y' : 'n'}`}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      defaultValue={goalCents != null ? (goalCents / 100).toFixed(2) : ''}
+                      onBlur={(e) => setGoal(c.id, e.target.value, goalDate)}
+                      placeholder="target €"
+                      className="w-24 rounded border border-slate-300 px-2 py-0.5 text-right text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                    />
+                    <input
+                      key={`goaldate-${c.id}-${report ? 'y' : 'n'}`}
+                      type="month"
+                      defaultValue={goalDate?.slice(0, 7) ?? ''}
+                      onBlur={(e) => setGoal(c.id, goalCents != null ? String(goalCents / 100) : '', e.target.value || null)}
+                      className="rounded border border-slate-300 px-2 py-0.5 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                    />
+                  </div>
+                )}
               </div>
             );
           })}

@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { euros, shortDate } from '../format';
 import type { Tx } from '../types';
 
-export function TxDetailModal({ tx, onClose }: { tx: Tx; onClose: () => void }) {
+export function TxDetailModal({ tx, onClose, onSaveNote }: { tx: Tx; onClose: () => void; onSaveNote: (note: string | null) => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -46,6 +46,19 @@ export function TxDetailModal({ tx, onClose }: { tx: Tx; onClose: () => void }) 
               : <span className="text-slate-400">Uncategorized</span>}
           </Row>
         </dl>
+
+        <div className="mt-4 border-t border-slate-100 pt-4 dark:border-slate-700">
+          <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Note</label>
+          <textarea
+            key={tx.id}
+            defaultValue={tx.notes ?? ''}
+            onBlur={(e) => onSaveNote(e.target.value.trim() || null)}
+            rows={2}
+            maxLength={1000}
+            placeholder="Add a note…"
+            className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+          />
+        </div>
       </div>
     </div>
   );

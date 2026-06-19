@@ -74,6 +74,15 @@ export default function Transactions() {
     setData((d) => (d ? { ...d, transactions: d.transactions.map((t) => (t.id === txId ? updated : t)) } : d));
   }
 
+  async function saveNote(txId: number, note: string | null) {
+    const updated = await api<Tx>(`/transactions/${txId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ notes: note }),
+    });
+    setData((d) => (d ? { ...d, transactions: d.transactions.map((t) => (t.id === txId ? updated : t)) } : d));
+    setSelectedTx((s) => (s?.id === txId ? updated : s));
+  }
+
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
   function toggleSort(col: string) {
@@ -191,7 +200,10 @@ export default function Transactions() {
                       </span>
                     )}
                   </div>
-                  <div className="max-w-xl truncate text-xs text-slate-400">{t.details}</div>
+                  <div className="max-w-xl truncate text-xs text-slate-400">
+                    {t.details}
+                    {t.notes && <span className="ml-1.5 text-slate-400" title={t.notes}>·</span>}
+                  </div>
                 </td>
                 <td className="px-3 py-2 align-top">
                   <select
@@ -253,7 +265,7 @@ export default function Transactions() {
         </div>
       )}
 
-      {selectedTx && <TxDetailModal tx={selectedTx} onClose={() => setSelectedTx(null)} />}
+      {selectedTx && <TxDetailModal tx={selectedTx} onClose={() => setSelectedTx(null)} onSaveNote={(n) => saveNote(selectedTx.id, n)} />}
     </div>
   );
 }
