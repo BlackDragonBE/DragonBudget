@@ -36,6 +36,9 @@ COPY --from=frontend /app/frontend/dist ./public
 ENV FRONTEND_DIR=/app/public
 ENV DATA_DIR=/data
 ENV DISPLAY=:99
+# Build-time version stamp (push-to-main timestamp), set by the CI workflow.
+ARG BUILD_VERSION=dev
+ENV BUILD_VERSION=$BUILD_VERSION
 EXPOSE 3000
 # Start Xvfb in the background (the server doesn't need it until a sync runs), then
 # exec node so it's PID 1 with proper signal handling. Headed Chromium launched by

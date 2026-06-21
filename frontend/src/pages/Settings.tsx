@@ -49,11 +49,15 @@ export default function Settings() {
   const [confirming, setConfirming] = useState(false);
   const [clearStatus, setClearStatus] = useState<'idle' | 'done' | 'error'>('idle');
 
+  // build version (stamped at image build time; 'dev' locally)
+  const [version, setVersion] = useState('');
+
   useEffect(() => {
     api<KnownAccount[]>('/known-accounts').then(setAccounts).catch(() => {});
     api<SyncSettings>('/sync/settings').then((s) => {
       setGsm(s.gsm); setClient(s.client); setAccountLabel(s.accountLabel);
     }).catch(() => {});
+    api<{ version: string }>('/health').then((h) => setVersion(h.version)).catch(() => {});
   }, []);
 
   async function saveSync(e: FormEvent) {
@@ -332,6 +336,9 @@ export default function Settings() {
           </>
         )}
 
+        {version && (
+          <p className="pt-4 text-xs text-slate-400">Build {version}</p>
+        )}
       </div>
     </div>
   );

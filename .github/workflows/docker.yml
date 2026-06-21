@@ -16,8 +16,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # Version stamp = build time in Brussels, format YYYY_DD_MM_HH_MM.
+      - id: version
+        run: echo "v=$(TZ=Europe/Brussels date +'%Y_%d_%m_%H_%M')" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: ghcr.io/blackdragonbe/dragonbudget:latest
+          build-args: |
+            BUILD_VERSION=${{ steps.version.outputs.v }}

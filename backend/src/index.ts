@@ -9,7 +9,10 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(sessionMiddleware);
 
-app.get('/api/health', (_req, res) => res.json({ ok: true }));
+// BUILD_VERSION is stamped at image build time by the CI workflow (push-to-main
+// timestamp). Unset in dev -> 'dev'. Exposed here (public, pre-auth) for the footer.
+const BUILD_VERSION = process.env.BUILD_VERSION || 'dev';
+app.get('/api/health', (_req, res) => res.json({ ok: true, version: BUILD_VERSION }));
 mountAuthRoutes(app);
 
 // Everything else under /api requires auth (no-op when APP_PASSWORD is unset).
