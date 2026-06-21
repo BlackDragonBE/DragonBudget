@@ -104,7 +104,7 @@ screen, offline app shell. Low effort, big mobile-feel win for a
 phone-on-the-go check. (Data still needs the server — Tailscale — so no
 offline data sync, just the shell.)
 
-### 2.5 Filtered CSV export
+### 2.5 Filtered CSV export > DONE
 JSON export exists; add CSV export of the current filtered transaction view
 for spreadsheet users. Near-trivial.
 

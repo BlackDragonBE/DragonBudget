@@ -28,41 +28,51 @@ export function resolveSort(query: { sort?: unknown; order?: unknown }): { col: 
   };
 }
 
-// GET /api/transactions?month=&category_id=&status=&q=&direction=&page=
-// month filters on execution_date (YYYY-MM). category_id='none' => uncategorized.
-// direction='income' => amount_cents > 0, 'expense' => amount_cents < 0.
-transactionsRouter.get('/', (req, res) => {
+function buildTxWhere(query: Record<string, unknown>): { whereSql: string; params: (string | number)[] } {
   const where: string[] = [];
   const params: (string | number)[] = [];
 
-  const month = req.query.month ? String(req.query.month) : '';
+  const month = query.month ? String(query.month) : '';
   if (/^\d{4}-\d{2}$/.test(month)) {
     where.push('substr(t.execution_date,1,7) = ?');
     params.push(month);
   }
 
-  const category = req.query.category_id ? String(req.query.category_id) : '';
+  const category = query.category_id ? String(query.category_id) : '';
   if (category === 'none') where.push('t.category_id IS NULL');
   else if (category) { where.push('t.category_id = ?'); params.push(Number(category)); }
 
-  const direction = req.query.direction ? String(req.query.direction) : '';
+  const direction = query.direction ? String(query.direction) : '';
   if (direction === 'income') where.push('t.amount_cents > 0');
   else if (direction === 'expense') where.push('t.amount_cents < 0');
 
-  const status = req.query.status ? String(req.query.status) : '';
+  const status = query.status ? String(query.status) : '';
   if (status === 'accepted' || status === 'rejected') { where.push('t.status = ?'); params.push(status); }
 
-  const q = req.query.q ? String(req.query.q).trim() : '';
+  const q = query.q ? String(query.q).trim() : '';
   if (q) {
     where.push('(t.details LIKE ? OR t.counterparty_name LIKE ? OR t.message LIKE ?)');
     const like = `%${q}%`;
     params.push(like, like, like);
   }
 
-  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  return { whereSql: where.length ? `WHERE ${where.join(' AND ')}` : '', params };
+}
+
+function csvRow(cells: (string | number | null | undefined)[]): string {
+  return cells.map(c => {
+    const s = c == null ? '' : String(c);
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+  }).join(',');
+}
+
+// GET /api/transactions?month=&category_id=&status=&q=&direction=&page=
+// month filters on execution_date (YYYY-MM). category_id='none' => uncategorized.
+// direction='income' => amount_cents > 0, 'expense' => amount_cents < 0.
+transactionsRouter.get('/', (req, res) => {
+  const { whereSql, params } = buildTxWhere(req.query);
   const page = Math.max(1, Number(req.query.page) || 1);
   const offset = (page - 1) * PAGE_SIZE;
-
   const { col: sortCol, dir: sortDir } = resolveSort(req.query);
 
   const total = (db.prepare(`SELECT COUNT(*) AS n FROM transactions t ${whereSql}`).get(...params) as { n: number }).n;
@@ -74,6 +84,35 @@ transactionsRouter.get('/', (req, res) => {
   `).all(...params, PAGE_SIZE, offset);
 
   res.json({ transactions, page, pageSize: PAGE_SIZE, total });
+});
+
+// GET /api/transactions/export/csv — same filters as list, no pagination, CSV download.
+// Must be before /:id so Express doesn't treat "export" as an id.
+transactionsRouter.get('/export/csv', (req, res) => {
+  const { whereSql, params } = buildTxWhere(req.query);
+  const { col: sortCol, dir: sortDir } = resolveSort(req.query);
+
+  const rows = db.prepare(`
+    ${TX_SELECT}
+    ${whereSql}
+    ORDER BY ${sortCol} ${sortDir}, t.id ${sortDir}
+  `).all(...params) as Record<string, unknown>[];
+
+  const header = csvRow(['date', 'counterparty', 'details', 'category', 'amount', 'currency', 'status', 'notes']);
+  const lines = rows.map(t => csvRow([
+    t.execution_date as string,
+    t.counterparty_name as string,
+    t.details as string,
+    t.category_name as string,
+    t.amount_cents != null ? ((t.amount_cents as number) / 100).toFixed(2) : '',
+    t.currency as string,
+    t.status as string,
+    t.notes as string,
+  ]));
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="transactions.csv"');
+  res.send([header, ...lines].join('\r\n'));
 });
 
 // DELETE /api/transactions — wipe all transactions and recurring entries.

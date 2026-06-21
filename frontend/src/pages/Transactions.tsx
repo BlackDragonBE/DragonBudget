@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { euros, shortDate } from '../format';
@@ -44,6 +44,18 @@ export default function Transactions() {
   }
 
   const anyFilter = !!(q || month || status || category || direction);
+  const csvHref = useMemo(() => {
+    const p = new URLSearchParams();
+    if (q) p.set('q', q);
+    if (month) p.set('month', month);
+    if (status) p.set('status', status);
+    if (category) p.set('category_id', category);
+    if (direction) p.set('direction', direction);
+    p.set('sort', sort);
+    p.set('order', order);
+    return `/api/transactions/export/csv?${p}`;
+  }, [q, month, status, category, direction, sort, order]);
+
   function clearFilters() {
     setQ(''); setMonth(''); setStatus(''); setCategory(''); setDirection('');
     setPage(1);
@@ -159,6 +171,13 @@ export default function Transactions() {
             Clear filters
           </button>
         )}
+        <a
+          href={csvHref}
+          download="transactions.csv"
+          className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+        >
+          Export CSV
+        </a>
       </div>
 
       {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>}
