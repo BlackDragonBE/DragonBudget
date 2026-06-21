@@ -63,12 +63,12 @@ function Card({
   return (
     <div className={`rounded border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900 ${item.status === 'dismissed' ? 'opacity-60' : ''}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           <input
             key={`label-${item.label}`}
             defaultValue={item.label}
             onBlur={(e) => e.target.value.trim() && e.target.value !== item.label && patch({ label: e.target.value })}
-            className="rounded border border-transparent px-1 py-0.5 font-medium hover:border-slate-200 focus:border-slate-300 dark:bg-transparent dark:text-slate-100 dark:hover:border-slate-700 dark:focus:border-slate-600"
+            className="min-w-0 flex-1 rounded border border-transparent px-1 py-0.5 font-medium hover:border-slate-200 focus:border-slate-300 dark:bg-transparent dark:text-slate-100 dark:hover:border-slate-700 dark:focus:border-slate-600"
           />
           <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${STATUS_BADGE[item.status]}`}>{item.status}</span>
           <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-400">{item.frequency}</span>

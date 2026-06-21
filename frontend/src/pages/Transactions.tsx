@@ -182,7 +182,64 @@ export default function Transactions() {
 
       {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>}
 
-      <div className="overflow-x-auto rounded border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+      {/* Mobile: card list (avoids horizontal scroll) */}
+      <div className="space-y-2 sm:hidden">
+        {data?.transactions.map((t) => (
+          <div
+            key={t.id}
+            onClick={() => setSelectedTx(t)}
+            className={`cursor-pointer rounded border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900 ${t.status === 'rejected' ? 'text-slate-400' : ''}`}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="font-medium">
+                  {t.counterparty_name || t.transaction_type}
+                  {t.status === 'rejected' && (
+                    <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900 dark:text-red-300">
+                      rejected
+                    </span>
+                  )}
+                  {t.known_account_name && (
+                    <span className="ml-2 rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                      {t.known_account_name}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-slate-400">{shortDate(t.execution_date)}</div>
+                <div className="mt-0.5 truncate text-xs text-slate-400">{t.details}</div>
+              </div>
+              <span
+                className={`whitespace-nowrap font-medium ${
+                  t.status === 'rejected' ? '' : t.amount_cents < 0 ? 'text-slate-900 dark:text-slate-100' : 'text-green-700'
+                }`}
+              >
+                {euros(t.amount_cents)}
+              </span>
+            </div>
+            <select
+              value={t.category_id ?? ''}
+              onChange={(e) => assign(t.id, e.target.value ? Number(e.target.value) : null)}
+              onClick={(e) => e.stopPropagation()}
+              className="mt-2 w-full rounded border border-slate-200 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            >
+              <option value="">— uncategorized —</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.icon} {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ))}
+        {data && data.transactions.length === 0 && (
+          <p className="rounded border border-slate-200 bg-white px-3 py-8 text-center text-slate-400 dark:border-slate-700 dark:bg-slate-900">
+            No transactions. Import a CSV to get started.
+          </p>
+        )}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden overflow-x-auto rounded border border-slate-200 bg-white sm:block dark:border-slate-700 dark:bg-slate-900">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left text-slate-500 dark:bg-slate-800 dark:text-slate-400">
             <tr>

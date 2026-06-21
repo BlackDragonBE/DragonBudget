@@ -91,7 +91,7 @@ export default function Budgets() {
             const received = row?.spent_cents ?? 0;
             return (
               <div key={c.id} className="flex items-center gap-2 px-3 py-2 text-sm">
-                <Link to={`/transactions?month=${month}&category_id=${c.id}&direction=income`} className="flex-1 rounded hover:bg-slate-50 dark:hover:bg-slate-800">{c.icon} {c.name}</Link>
+                <Link to={`/transactions?month=${month}&category_id=${c.id}&direction=income`} className="min-w-0 flex-1 truncate rounded hover:bg-slate-50 dark:hover:bg-slate-800">{c.icon} {c.name}</Link>
                 <span className="w-24 text-right text-green-700">{euros(received)}</span>
                 <input
                   key={`${c.id}-${month}-${report ? 'y' : 'n'}`}
@@ -171,7 +171,7 @@ export default function Budgets() {
 
             return (
               <div key={c.id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
-                <Link to={`/transactions?month=${month}&category_id=${c.id}&direction=expense`} className="w-40 shrink-0 rounded hover:bg-slate-50 dark:hover:bg-slate-800">{c.icon} {c.name}</Link>
+                <Link to={`/transactions?month=${month}&category_id=${c.id}&direction=expense`} className="w-40 shrink-0 truncate rounded hover:bg-slate-50 dark:hover:bg-slate-800">{c.icon} {c.name}</Link>
                 <div className="flex flex-1 flex-col gap-0.5">
                   <div className="flex items-center gap-1.5">
                     <div className="h-2 flex-1 rounded-full bg-slate-200 dark:bg-slate-700">
@@ -257,7 +257,7 @@ export default function Budgets() {
           })}
           {uncategorizedSpent > 0 && (
             <div className="flex items-center gap-2 px-3 py-2 text-sm">
-              <Link to={`/transactions?month=${month}&category_id=none`} className="w-40 shrink-0 rounded text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800">Uncategorized</Link>
+              <Link to={`/transactions?month=${month}&category_id=none`} className="w-40 shrink-0 truncate rounded text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800">Uncategorized</Link>
               <span className="flex-1" />
               <span className="w-24 text-right text-slate-600 dark:text-slate-400">{euros(uncategorizedSpent)}</span>
               <span className="w-28" />
