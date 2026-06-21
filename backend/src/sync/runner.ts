@@ -102,15 +102,24 @@ export async function runSync(creds: BankCreds, onStatus: OnStatus): Promise<str
 }
 
 // Rolling window: [today − 3 months, today], formatted dd/mm/yyyy for the bank's
-// date inputs. setMonth handles the month rollover; a day that doesn't exist in
-// the target month shifts by a day or two, which is harmless for a range start.
+// date inputs. The end is *today in Europe/Brussels*, computed explicitly because the
+// bank rejects an end date after today in Belgian time, while the production container
+// runs in UTC (behind Brussels) — using the raw UTC date would drop today's
+// transactions in the early hours. todayBE is derived via Intl (TZ-correct), then the
+// 3-month subtraction is plain UTC calendar math so it's independent of the host TZ.
+// A day that doesn't exist in the target month shifts by a day or two — harmless for
+// a range start; dedup absorbs any overlap.
 function last3Months(): { from: string; to: string } {
-  const to = new Date();
+  const todayBE = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Brussels', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date()); // "YYYY-MM-DD"
+  const [y, m, d] = todayBE.split('-').map(Number);
+  const to = new Date(Date.UTC(y, m - 1, d));
   const from = new Date(to);
-  from.setMonth(from.getMonth() - 3);
-  const fmt = (d: Date) => {
+  from.setUTCMonth(from.getUTCMonth() - 3);
+  const fmt = (dt: Date) => {
     const p = (n: number) => String(n).padStart(2, '0');
-    return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
+    return `${p(dt.getUTCDate())}/${p(dt.getUTCMonth() + 1)}/${dt.getUTCFullYear()}`;
   };
   return { from: fmt(from), to: fmt(to) };
 }

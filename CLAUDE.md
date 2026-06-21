@@ -87,6 +87,34 @@ negative. Non-rollover categories never get `carried_in_cents` / `available_cent
 `requireAuth`-gated `/api` router; auth routes (`/api/auth/*`) and `/api/health` are
 mounted before the gate so login is reachable.
 
+**Bank sync drives a real browser** (`sync/`). `routes/sync.ts` → `sync/job.ts`
+(single in-memory job, single-user; no queue) → `sync/runner.ts`, a Playwright script
+that logs into Easy Banking Web (user confirms via itsme on their phone), exports the
+last 3 months as CSV, and feeds it through the **same** `parseBnpCsv` →
+`importTransactions` path as a manual upload. Login identifiers (GSM number, client
+number, account label) live in the `settings` key-value table — they're not secrets
+(itsme is the real auth), so they're stored/returned in plaintext like account numbers.
+
+The non-obvious part is **how the browser runs headed in a headless container**:
+- **BNPPF blocks headless Chromium** (bot detection), so the sync runs *headed*
+  (`headless: false` in `runner.ts`). `SYNC_HEADLESS=true` forces headless only for
+  testing that path.
+- A container has no display, so the image installs **`xvfb`** (a virtual X server)
+  next to Chromium. The Dockerfile sets `ENV DISPLAY=:99` and the `CMD` starts
+  `Xvfb :99 …` in the background, then `exec node` (so node is PID 1 and gets signals).
+  Headed Chromium launched later by the sync inherits `DISPLAY=:99` and renders there.
+  **`xvfb-run` as PID 1 does not bring the display up reliably** — start `Xvfb` directly.
+- Chromium runs as root in the container, so the launch passes **`--no-sandbox`**
+  (without it the launch *hangs*) plus `--disable-dev-shm-usage` (tiny `/dev/shm`).
+  Both are harmless on a desktop, where the real display is used and no xvfb is needed.
+- The Chromium **binary** is baked into the image (~400 MB); the **login profile**
+  (`launchPersistentContext`) lives at `$DATA_DIR/playwright-profile` so itsme
+  device-trust survives restarts via the `/data` volume.
+- Bank pages keep connections open, so `page.goto` uses `waitUntil: 'commit'` (never
+  `'load'`/`'domcontentloaded'`, which may never fire); element locators auto-wait for
+  the actual fields. Selectors come from `playwright codegen`; if BNPPF changes the UI
+  the script fails loudly into the job's `error` status rather than importing nothing.
+
 ## Invariants — do not break these
 
 - **Money is integer cents everywhere.** Convert to/from euros only at the API/display

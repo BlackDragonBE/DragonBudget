@@ -75,6 +75,26 @@ amount.
 **Access control on a home server:** Tailscale network membership keeps the public
 internet out; the `APP_PASSWORD` gate covers anyone else on your tailnet.
 
+## Updating (production)
+
+Production runs the prebuilt image from GHCR via [`docker-compose.prod.yml`](docker-compose.prod.yml).
+Every push to `main` triggers a GitHub Actions build that publishes
+`ghcr.io/blackdragonbe/dragonbudget:latest`, and the Watchtower label on the service
+makes the server auto-redeploy when that image changes — on Watchtower's poll interval,
+so it may take a while.
+
+To pull and restart **immediately** once the new image is on GHCR (wait for the
+Actions build to finish first), run on the server:
+
+```bash
+docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
+```
+
+> **Bank sync (first run):** after updating, go to **Settings → Bank sync**, enter your
+> GSM number, client number, and account label, then **Import → Sync now** and confirm
+> the login once in itsme. That seeds a persistent browser profile under `/data` so later
+> syncs reuse the trusted-device login.
+
 ## Authentication
 
 There's a single shared-password gate, controlled by two env vars that do different
