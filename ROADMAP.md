@@ -87,18 +87,18 @@ One transaction split across categories (the supermarket run that's groceries
 
 ## Tier 2 — strong follow-ups
 
-### 2.1 Savings goals
+### 2.1 Savings goals > DONE
 Target amount + optional target date + progress bar. Maps cleanly onto a
 sinking-fund category once 1.1 exists — a goal is "rollover category + a
 target." Build *after* rollover or it's redundant.
 
-### 2.2 Notes on transactions (tags later, maybe never)
+### 2.2 Notes on transactions (tags later, maybe never) > DONE
 A single `notes TEXT` column on `transactions` covers 90% of the use case with
 one migration line. Tags add a junction table, tag-management UI, and filter
 logic — real complexity for marginal gain. Add the `notes` column; add tags
 only if you find yourself typing structured tags into the note field.
 
-### 2.4 PWA / installable mobile
+### 2.4 PWA / installable mobile > DONE
 A `manifest.webmanifest` is already committed. Finish it: installable to home
 screen, offline app shell. Low effort, big mobile-feel win for a
 phone-on-the-go check. (Data still needs the server — Tailscale — so no
