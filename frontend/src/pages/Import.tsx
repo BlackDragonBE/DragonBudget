@@ -80,7 +80,7 @@ export default function Import() {
       <div className="space-y-3 rounded border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
         <h3 className="font-medium">Sync from bank</h3>
         <p className="text-sm text-slate-500">
-          Logs into Easy Banking Web and downloads the last 90 days. You confirm the
+          Logs into Easy Banking Web and downloads the last 3 months. You confirm the
           login once in your itsme app.
         </p>
         <div className="flex items-center gap-3">

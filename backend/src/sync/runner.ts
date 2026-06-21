@@ -22,7 +22,7 @@ const ACCOUNTS_URL = 'https://www.bnpparibasfortis.be/nl/secured/accounts/my-acc
 
 /**
  * Log into Easy Banking Web (user confirms via itsme on their phone), export the
- * current year's transactions for the chosen account as CSV, and return its text.
+ * last 3 months of transactions for the chosen account as CSV, and return its text.
  *
  * Throws on any failure — the caller turns that into an `error` job status so a
  * UI change at the bank surfaces loudly instead of silently importing nothing.
@@ -68,24 +68,29 @@ export async function runSync(creds: BankCreds, onStatus: OnStatus): Promise<str
     onStatus('waiting_itsme');
     await page.waitForURL('**/secured/**', { timeout: 180_000 });
 
-    // --- Navigate to the account and export the current year as CSV ---
+    // --- Navigate to the account and export the last 3 months as CSV ---
     onStatus('downloading');
     await page.goto(ACCOUNTS_URL, { waitUntil: 'commit', timeout: 60_000 });
     await page.getByRole('link', { name: creds.accountLabel, exact: true }).click();
     await page.getByRole('link', { name: 'Zoeken Zoek en exporteer' }).click();
     await page.getByRole('textbox', { name: 'Zoek op bedrag, datum, naam,' }).click();
-    await page.getByRole('link', { name: 'In het jaar' }).click();
-    // ponytail: exports the current calendar year; in early January last December
-    // isn't covered until the next sync / a manual CSV upload. Dedup makes the
-    // overlap on every other sync harmless.
-    await page.getByRole('textbox', { name: 'jjjj' }).fill(String(new Date().getFullYear()));
+    // Rolling last-3-months window via the "Tussen <from> en <to>" date filter.
+    // Rolling beats whole-year: no year-boundary gap and a smaller export; dedup
+    // makes the overlap with the previous sync harmless.
+    const { from, to } = last3Months();
+    await page.getByRole('link', { name: 'Tussendd/mm/jjjj endd/mm/jjjj' }).click();
+    await page.locator('#firstInput').fill(from);
+    await page.locator('#firstInput').press('Tab');
+    await page.locator('#secondInput').fill(to);
     await page.locator('.fontcon-search').click();
-    await page.getByRole('link', { name: 'CSV' }).click();
-    // CSV-options modal — positional selector from the recording (fragile).
-    await page.locator('.modal-body > div:nth-child(3)').click();
-
+    // Start listening before the click that triggers the download. Clicking "CSV"
+    // opens the export dialog (or downloads directly); a "Bevestigen" confirm may or
+    // may not appear, so click it best-effort. The number format is remembered in the
+    // persistent profile; parse.ts tolerates comma decimals (only a thousands
+    // separator would break it), so no per-export format click is needed.
     const downloadPromise = page.waitForEvent('download', { timeout: 60_000 });
-    await page.getByRole('button', { name: 'Bevestigen' }).click();
+    await page.getByRole('link', { name: 'CSV' }).click();
+    await page.getByRole('button', { name: 'Bevestigen' }).click({ timeout: 5_000 }).catch(() => {});
     const download = await downloadPromise;
 
     const downloadPath = await download.path();
@@ -94,4 +99,18 @@ export async function runSync(creds: BankCreds, onStatus: OnStatus): Promise<str
   } finally {
     await ctx.close();
   }
+}
+
+// Rolling window: [today − 3 months, today], formatted dd/mm/yyyy for the bank's
+// date inputs. setMonth handles the month rollover; a day that doesn't exist in
+// the target month shifts by a day or two, which is harmless for a range start.
+function last3Months(): { from: string; to: string } {
+  const to = new Date();
+  const from = new Date(to);
+  from.setMonth(from.getMonth() - 3);
+  const fmt = (d: Date) => {
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
+  };
+  return { from: fmt(from), to: fmt(to) };
 }
