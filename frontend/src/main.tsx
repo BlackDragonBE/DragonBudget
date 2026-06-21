@@ -7,7 +7,7 @@ import { initTheme } from './theme';
 
 initTheme();
 
-if ('serviceWorker' in navigator) {
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js');
 }
 

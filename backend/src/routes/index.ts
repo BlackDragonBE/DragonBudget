@@ -8,10 +8,12 @@ import { budgetsRouter } from './budgets';
 import { recurringRouter } from './recurring';
 import { dataportRouter } from './dataport';
 import { knownAccountsRouter } from './known-accounts';
+import { syncRouter } from './sync';
 
 // Mount point for all authenticated /api resource routers.
 export function mountApiRoutes(api: Router): void {
   api.use('/import', importRouter);
+  api.use('/sync', syncRouter);
   api.use('/transactions', transactionsRouter);
   api.use('/categories', categoriesRouter);
   api.use('/rules', rulesRouter);

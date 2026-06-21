@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { api } from '../api';
-import type { KnownAccount } from '../types';
+import type { KnownAccount, SyncSettings } from '../types';
 import { getTheme, setTheme, type Theme } from '../theme';
 
 function download(filename: string, data: unknown) {
@@ -14,6 +14,7 @@ const NAV = [
   { id: 'appearance', label: 'Appearance',   icon: '🎨' },
   { id: 'data',       label: 'Data',         icon: '🗄️' },
   { id: 'accounts',   label: 'Accounts',     icon: '🏦' },
+  { id: 'sync',       label: 'Bank sync',    icon: '🔄' },
   { id: 'danger',     label: 'Danger zone',  icon: '⚠️' },
 ] as const;
 type Section = typeof NAV[number]['id'];
@@ -38,13 +39,34 @@ export default function Settings() {
   const [accounts, setAccounts] = useState<KnownAccount[]>([]);
   const [acctError, setAcctError] = useState('');
 
+  // sync section
+  const [gsm, setGsm] = useState('');
+  const [client, setClient] = useState('');
+  const [accountLabel, setAccountLabel] = useState('');
+  const [syncMsg, setSyncMsg] = useState('');
+
   // danger section
   const [confirming, setConfirming] = useState(false);
   const [clearStatus, setClearStatus] = useState<'idle' | 'done' | 'error'>('idle');
 
   useEffect(() => {
     api<KnownAccount[]>('/known-accounts').then(setAccounts).catch(() => {});
+    api<SyncSettings>('/sync/settings').then((s) => {
+      setGsm(s.gsm); setClient(s.client); setAccountLabel(s.accountLabel);
+    }).catch(() => {});
   }, []);
+
+  async function saveSync(e: FormEvent) {
+    e.preventDefault();
+    setSyncMsg('');
+    try {
+      await api<SyncSettings>('/sync/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ gsm: gsm.trim(), client: client.trim(), accountLabel: accountLabel.trim() }),
+      });
+      setSyncMsg('Saved.');
+    } catch (e) { setSyncMsg(`Save failed: ${(e as Error).message}`); }
+  }
 
   async function exportTransactions() {
     try { download('transactions.json', await api('/export/transactions')); }
@@ -227,6 +249,58 @@ export default function Settings() {
               error={acctError}
               placeholder="BE28 3200 3872 7120"
             />
+          </>
+        )}
+
+        {section === 'sync' && (
+          <>
+            <h1 className="text-xl font-semibold">Bank sync</h1>
+            <section className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+              <h2 className="mb-1 font-medium text-slate-700 dark:text-slate-300">Easy Banking login</h2>
+              <p className="mb-4 text-sm text-slate-500">
+                Used to start the Easy Banking Web login. No password is stored — you
+                confirm each sync in your itsme app. Run a sync from the Import page.
+              </p>
+              <form onSubmit={saveSync} className="space-y-3">
+                <label className="block">
+                  <span className="mb-1 block text-sm text-slate-600 dark:text-slate-400">GSM number</span>
+                  <input
+                    value={gsm}
+                    onChange={(e) => setGsm(e.target.value)}
+                    placeholder="0494 49 00 60"
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-sm font-mono dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-sm text-slate-600 dark:text-slate-400">Client number (Klantnummer)</span>
+                  <input
+                    value={client}
+                    onChange={(e) => setClient(e.target.value)}
+                    placeholder="11506 20607"
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-sm font-mono dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-sm text-slate-600 dark:text-slate-400">Account name</span>
+                  <input
+                    value={accountLabel}
+                    onChange={(e) => setAccountLabel(e.target.value)}
+                    placeholder="VAN DE KERCKHOVE E"
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                  />
+                  <span className="mt-1 block text-xs text-slate-400">
+                    Exactly as it appears in the account list on Easy Banking Web — the sync clicks this account before exporting.
+                  </span>
+                </label>
+                <button
+                  type="submit"
+                  className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800"
+                >
+                  Save
+                </button>
+              </form>
+              {syncMsg && <p className="mt-2 text-xs text-slate-500">{syncMsg}</p>}
+            </section>
           </>
         )}
 

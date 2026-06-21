@@ -185,3 +185,20 @@ export interface ImportSummary {
   rejected: number;
   autoCategorized: number;
 }
+
+export type SyncJobStatus =
+  | 'idle' | 'launching' | 'waiting_itsme' | 'downloading' | 'importing' | 'done' | 'error';
+
+export interface SyncJob {
+  status: SyncJobStatus;
+  startedAt: string | null;
+  summary: ImportSummary | null;
+  error: string | null;
+}
+
+export interface SyncSettings {
+  gsm: string;
+  client: string;
+  accountLabel: string;
+  configured: boolean;
+}

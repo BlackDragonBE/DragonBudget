@@ -95,4 +95,11 @@ CREATE TABLE IF NOT EXISTS known_accounts (
   account_number  TEXT NOT NULL UNIQUE,
   is_own_account  INTEGER NOT NULL DEFAULT 0
 );
+
+-- App-level key-value settings (e.g. bank_card_number for sync). Not for secrets;
+-- this DB already holds all financial data behind the auth gate + Tailscale.
+CREATE TABLE IF NOT EXISTS settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT
+);
 `;

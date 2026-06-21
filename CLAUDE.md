@@ -12,6 +12,7 @@ container behind Tailscale. See `DESIGN.md` for the full spec and rationale.
 ```bash
 # Backend (port 3000) — tsx watch auto-reloads on source edits
 cd backend && npm install && DATA_DIR=./data npm run dev
+cd backend && npx playwright install chromium   # once, for bank sync (Playwright)
 cd backend && npm run build          # tsc -> dist/  (also the typecheck)
 cd backend && npm test               # node --test over test/**/*.test.ts
 cd backend && node --import tsx --test test/rules.test.ts   # single test file
