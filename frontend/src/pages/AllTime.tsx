@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area,
 } from 'recharts';
 import { api } from '../api';
 import { euros } from '../format';
@@ -37,6 +37,50 @@ function useDark() {
       return () => mo.disconnect();
     },
     () => document.documentElement.classList.contains('dark'),
+  );
+}
+
+type ChartColors = { grid: string; tick: string; tooltip: object };
+
+// Small multiples: one mini trend chart per category, biggest total first.
+// Each cell scales to its own max (independent y-axis) so small categories stay
+// legible; the header total carries absolute magnitude.
+function CategorySmallMultiples({ trends, chartColors }: { trends: CategoryTrends; chartColors: ChartColors }) {
+  const cells = trends.categories
+    .map((c, i) => {
+      const series = trends.data.map((row) => ({ month: row.month as string, value: (row[c.name] as number) ?? 0 }));
+      const total = series.reduce((s, p) => s + p.value, 0);
+      return { ...c, color: c.color ?? PALETTE[i % PALETTE.length], series, total };
+    })
+    .sort((a, b) => b.total - a.total);
+
+  return (
+    <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
+      {cells.map((c) => (
+        <div key={c.id} className="rounded border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{c.name}</span>
+            <span className="text-xs tabular-nums text-slate-500">{euros(c.total)}</span>
+          </div>
+          <div className="mt-1 h-12 w-full">
+            <ResponsiveContainer>
+              <AreaChart data={c.series} margin={{ top: 4, right: 2, bottom: 0, left: 2 }}>
+                <XAxis dataKey="month" hide />
+                <Tooltip
+                  formatter={(v: number) => euros(v)}
+                  contentStyle={{ ...chartColors.tooltip, padding: '2px 8px', fontSize: 12 }}
+                  allowEscapeViewBox={{ x: true, y: true }}
+                  position={{ y: -52 }}
+                  cursor={{ stroke: chartColors.tick, strokeWidth: 1 }}
+                  wrapperStyle={{ zIndex: 10 }}
+                />
+                <Area type="monotone" dataKey="value" stroke={c.color} fill={c.color} fillOpacity={0.13} strokeWidth={1.5} dot={false} isAnimationActive={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -132,20 +176,7 @@ export default function AllTime() {
         {trends.data.length === 0 ? (
           <p className="text-sm text-slate-400">No spending in this range.</p>
         ) : (
-          <div className="h-80 w-full">
-            <ResponsiveContainer>
-              <BarChart data={trends.data} margin={{ top: 5, right: 10, bottom: 5, left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: chartColors.tick }} />
-                <YAxis tick={{ fontSize: 11, fill: chartColors.tick }} tickFormatter={eurTick} width={60} />
-                <Tooltip formatter={(v: number) => euros(v)} contentStyle={chartColors.tooltip} />
-                <Legend wrapperStyle={{ fontSize: 12, color: chartColors.tick }} />
-                {trends.categories.map((c, i) => (
-                  <Bar key={c.id} dataKey={c.name} stackId="spend" fill={c.color ?? PALETTE[i % PALETTE.length]} />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <CategorySmallMultiples trends={trends} chartColors={chartColors} />
         )}
       </section>
 
@@ -154,20 +185,7 @@ export default function AllTime() {
         {incomeTrends.data.length === 0 ? (
           <p className="text-sm text-slate-400">No income in this range.</p>
         ) : (
-          <div className="h-80 w-full">
-            <ResponsiveContainer>
-              <BarChart data={incomeTrends.data} margin={{ top: 5, right: 10, bottom: 5, left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: chartColors.tick }} />
-                <YAxis tick={{ fontSize: 11, fill: chartColors.tick }} tickFormatter={eurTick} width={60} />
-                <Tooltip formatter={(v: number) => euros(v)} contentStyle={chartColors.tooltip} />
-                <Legend wrapperStyle={{ fontSize: 12, color: chartColors.tick }} />
-                {incomeTrends.categories.map((c, i) => (
-                  <Bar key={c.id} dataKey={c.name} stackId="income" fill={c.color ?? PALETTE[i % PALETTE.length]} />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <CategorySmallMultiples trends={incomeTrends} chartColors={chartColors} />
         )}
       </section>
     </div>

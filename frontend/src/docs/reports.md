@@ -56,13 +56,13 @@ You can also enter a **starting balance** if you know what your balance was at a
 
 The balance is calculated from transaction amounts — it reflects your imported transaction history and may not match your bank exactly if you have accounts not covered by imports.
 
-### Spending by category (stacked bar)
+### Spending by category
 
-A monthly stacked bar chart shows how much you spent in each expense category per month. Hovering over a bar shows the breakdown. Use this to spot seasonal patterns — higher heating bills in winter, holiday spending in December, and so on.
+A grid of mini trend charts, one per expense category, sorted by total spend over the range (biggest first). Each cell shows that category's month-to-month trend and its range total; hover a point to see the exact amount for that month. Use this to spot per-category patterns — heating creeping up in winter, holiday spending in December, and so on.
 
-### Income by category (stacked bar)
+### Income by category
 
-The same chart format for income categories. Useful for seeing month-to-month variation in variable income.
+The same grid format for income categories. Useful for seeing month-to-month variation in variable income.
 
 ---
 
