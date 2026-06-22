@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { db } from '../db';
 import { getSetting, setSetting } from '../settings';
 import { startJob, getJob, isRunning } from '../sync/job';
+import type { BankAccount } from '../sync/runner';
 
 export const syncRouter = Router();
 
@@ -13,7 +14,9 @@ function readSettings() {
   const gsm = getSetting(db, 'bank_gsm_number') ?? '';
   const client = getSetting(db, 'bank_client_number') ?? '';
   const accountLabel = getSetting(db, 'bank_account_label') ?? '';
-  return { gsm, client, accountLabel, configured: !!(gsm && client && accountLabel) };
+  const accounts = JSON.parse(getSetting(db, 'bank_accounts') ?? '[]') as BankAccount[];
+  const balanceSyncedAt = getSetting(db, 'bank_balance_synced_at');
+  return { gsm, client, accountLabel, configured: !!(gsm && client && accountLabel), accounts, balanceSyncedAt };
 }
 
 // GET /api/sync/settings

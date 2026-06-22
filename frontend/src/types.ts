@@ -197,9 +197,19 @@ export interface SyncJob {
   error: string | null;
 }
 
+export interface BankAccount {
+  name: string;
+  iban: string | null;
+  type: string | null;
+  balanceCents: number | null;
+  currency: string | null;
+}
+
 export interface SyncSettings {
   gsm: string;
   client: string;
   accountLabel: string;
   configured: boolean;
+  accounts: BankAccount[];
+  balanceSyncedAt: string | null;
 }

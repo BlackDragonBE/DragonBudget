@@ -18,6 +18,25 @@ export interface BankCreds {
   accountLabel: string; // the account link text to open, e.g. "VAN DE KERCKHOVE E"
 }
 
+// A balance scraped off the accounts-list page (current + savings).
+export interface BankAccount {
+  name: string;
+  iban: string | null;
+  type: string | null;
+  balanceCents: number | null;
+  currency: string | null;
+}
+
+// On-screen Belgian amount → integer cents. "514,62"→51462, "6.371,66"→637166,
+// "-19,00"→-1900, "€ 0,00"→0. Drops "." thousands separators (so toCents in
+// parse.ts can't be reused), treats "," as decimal. null on garbage.
+export function parseBalance(text: string | null): number | null {
+  if (!text) return null;
+  const cleaned = text.replace(/[^\d.,-]/g, '').replace(/\./g, '').replace(',', '.');
+  const f = parseFloat(cleaned);
+  return Number.isNaN(f) ? null : Math.round(f * 100);
+}
+
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', '..', 'data');
 // Persisted Chromium profile so itsme "trust this device" + cookie consent
 // survive restarts (lives under the /data volume mount in Docker).
@@ -37,7 +56,7 @@ const ACCOUNTS_URL = 'https://www.bnpparibasfortis.be/nl/secured/accounts/my-acc
  * based where possible. The CSV-options modal step uses a positional selector and
  * is the most likely thing to break if BNPPF changes the export dialog.
  */
-export async function runSync(creds: BankCreds, onStatus: OnStatus): Promise<string> {
+export async function runSync(creds: BankCreds, onStatus: OnStatus): Promise<{ csv: string; accounts: BankAccount[] }> {
   onStatus('launching');
   fs.mkdirSync(PROFILE_DIR, { recursive: true });
 
@@ -80,6 +99,16 @@ export async function runSync(creds: BankCreds, onStatus: OnStatus): Promise<str
     // --- Navigate to the account and export the last 3 months as CSV ---
     onStatus('navigating_account');
     await page.goto(ACCOUNTS_URL, { waitUntil: 'commit', timeout: 60_000 });
+    // Wait for the rivets-rendered list (the account link auto-waits on the click
+    // below; this just lets us scrape balances before drilling in).
+    await page.getByRole('link', { name: creds.accountLabel, exact: true }).waitFor();
+
+    // ponytail: balance scrape is best-effort; selectors from page HTML, [] on miss.
+    // The current + savings accounts (and their live balances) are all on this list
+    // page — read them before clicking into one. A UI change here must not abort the
+    // sync, so this is wrapped and never throws.
+    const accounts = await scrapeAccounts(page);
+
     await page.getByRole('link', { name: creds.accountLabel, exact: true }).click();
     await page.getByRole('link', { name: 'Zoeken Zoek en exporteer' }).click();
 
@@ -106,9 +135,32 @@ export async function runSync(creds: BankCreds, onStatus: OnStatus): Promise<str
 
     const downloadPath = await download.path();
     // Match the manual-upload path, which reads the CSV as UTF-8.
-    return await fs.promises.readFile(downloadPath, 'utf8');
+    const csv = await fs.promises.readFile(downloadPath, 'utf8');
+    return { csv, accounts };
   } finally {
     await ctx.close();
+  }
+}
+
+// Scrape every account (current + savings) and its live balance off the accounts
+// list page. Best-effort: any failure yields [] so the CSV import still proceeds.
+async function scrapeAccounts(page: import('playwright').Page): Promise<BankAccount[]> {
+  try {
+    const raw = await page.locator('.accountsModel').evaluateAll((nodes) =>
+      nodes.map((n) => ({
+        name: n.querySelector('.userName')?.getAttribute('aria-label')?.trim()
+          ?? n.querySelector('.userName')?.textContent?.trim() ?? '',
+        iban: n.querySelector('.no_wrap')?.textContent?.trim() ?? null,
+        type: n.querySelector('.long_account_type')?.textContent?.trim() ?? null,
+        amountText: n.querySelector('span[data-rv-text="account.account.balance.amount|currency"]')?.textContent?.trim() ?? null,
+        currency: n.querySelector('span[data-rv-text="account.account.balance.currency"]')?.textContent?.trim() ?? null,
+      })),
+    );
+    return raw
+      .filter((a) => a.name)
+      .map((a) => ({ name: a.name, iban: a.iban, type: a.type, balanceCents: parseBalance(a.amountText), currency: a.currency }));
+  } catch {
+    return [];
   }
 }
 

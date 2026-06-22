@@ -4,7 +4,7 @@ import {
 } from 'recharts';
 import { api } from '../api';
 import { euros } from '../format';
-import type { BalancePoint, CategoryTrends } from '../types';
+import type { BalancePoint, CategoryTrends, SyncSettings } from '../types';
 
 const PRESETS = [
   { v: '3m', label: 'Last 3 months', months: 3 },
@@ -48,14 +48,23 @@ export default function AllTime() {
     tooltip: dark ? { backgroundColor: '#1e293b', border: '1px solid #334155', color: '#e2e8f0' } : {},
   };
   const [preset, setPreset] = useState('6m');
-  const [currentEuros, setCurrentEuros] = useState(() => localStorage.getItem('currentBalance') ?? '0');
+  const [sync, setSync] = useState<SyncSettings | null>(null);
   const [balance, setBalance] = useState<BalancePoint[]>([]);
   const [trends, setTrends] = useState<CategoryTrends>({ categories: [], data: [] });
   const [incomeTrends, setIncomeTrends] = useState<CategoryTrends>({ categories: [], data: [] });
 
   useEffect(() => {
+    api<SyncSettings>('/sync/settings').then(setSync).catch(() => {});
+  }, []);
+
+  // Chart anchor: total net worth across all accounts. The history curve is built
+  // from the synced account's transactions, so the savings balance is a constant
+  // offset that lifts the whole line to end at the real total.
+  const accounts = sync?.accounts ?? [];
+  const currentCents = accounts.reduce((s, a) => s + (a.balanceCents ?? 0), 0);
+
+  useEffect(() => {
     const { fromDate, toDate } = rangeFor(preset);
-    const currentCents = Math.round((parseFloat(currentEuros.replace(',', '.')) || 0) * 100);
     const bp = new URLSearchParams({ to: toDate, current_cents: String(currentCents) });
     if (fromDate) bp.set('from', fromDate);
     api<BalancePoint[]>(`/reports/balance-history?${bp}`).then(setBalance);
@@ -64,26 +73,44 @@ export default function AllTime() {
     if (fromDate) tp.set('from', fromDate.slice(0, 7));
     api<CategoryTrends>(`/reports/category-trends?${tp}`).then(setTrends);
     api<CategoryTrends>(`/reports/category-trends?${tp}&income=1`).then(setIncomeTrends);
-  }, [preset, currentEuros]);
+  }, [preset, currentCents]);
+
+  const syncedAt = sync?.balanceSyncedAt
+    ? new Date(sync.balanceSyncedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    : null;
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xl font-semibold">All-time overview</h2>
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <label className="flex items-center gap-1 text-slate-500">
-            Current balance €
-            <input
-              value={currentEuros}
-              onChange={(e) => { setCurrentEuros(e.target.value); localStorage.setItem('currentBalance', e.target.value); }}
-              className="w-24 rounded border border-slate-300 px-2 py-1 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-            />
-          </label>
-          <select value={preset} onChange={(e) => setPreset(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100">
-            {PRESETS.map((p) => <option key={p.v} value={p.v}>{p.label}</option>)}
-          </select>
-        </div>
+        <select value={preset} onChange={(e) => setPreset(e.target.value)} className="rounded border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100">
+          {PRESETS.map((p) => <option key={p.v} value={p.v}>{p.label}</option>)}
+        </select>
       </div>
+
+      <section className="rounded border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400">Current balance</h3>
+          {syncedAt && <span className="text-xs text-slate-400">synced {syncedAt}</span>}
+        </div>
+        {accounts.length === 0 ? (
+          <p className="mt-2 text-sm text-slate-400">No balance yet — run a sync on the Import page.</p>
+        ) : (
+          <>
+            <p className="mt-1 text-2xl font-semibold tabular-nums">{euros(currentCents)}</p>
+            {accounts.length > 1 && (
+              <dl className="mt-3 space-y-1 text-sm">
+                {accounts.map((a) => (
+                  <div key={a.iban ?? a.name} className="flex justify-between gap-2">
+                    <dt className="text-slate-500">{a.name}{a.type ? ` · ${a.type}` : ''}</dt>
+                    <dd className="tabular-nums">{euros(a.balanceCents ?? 0)}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </>
+        )}
+      </section>
 
       <section className="rounded border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
         <h3 className="mb-3 text-sm font-medium text-slate-600 dark:text-slate-400">Balance over time</h3>

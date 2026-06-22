@@ -1,7 +1,7 @@
 import type { DB } from '../db';
 import { parseBnpCsv } from '../csv/parse';
 import { importTransactions, type ImportSummary } from '../csv/import';
-import { getSetting } from '../settings';
+import { getSetting, setSetting } from '../settings';
 import { runSync, type SyncStep } from './runner';
 
 export type JobStatus = 'idle' | SyncStep | 'importing' | 'done' | 'error';
@@ -43,9 +43,13 @@ export function startJob(db: DB): Job {
   current = { status: 'launching', startedAt: new Date().toISOString(), summary: null, error: null };
 
   runSync({ gsm, client, accountLabel }, (step) => { current.status = step; })
-    .then((csv) => {
+    .then(({ csv, accounts }) => {
       current.status = 'importing';
       const summary = importTransactions(db, parseBnpCsv(csv));
+      if (accounts.length) {
+        setSetting(db, 'bank_accounts', JSON.stringify(accounts));
+        setSetting(db, 'bank_balance_synced_at', new Date().toISOString());
+      }
       current = { ...current, status: 'done', summary };
     })
     .catch((e: unknown) => {
