@@ -3,7 +3,13 @@ import fs from 'node:fs';
 import { chromium } from 'playwright';
 
 // Live, user-facing step of an in-progress sync.
-export type SyncStep = 'launching' | 'waiting_itsme' | 'downloading';
+export type SyncStep =
+  | 'launching'
+  | 'navigating'
+  | 'logging_in'
+  | 'waiting_itsme'
+  | 'navigating_account'
+  | 'downloading';
 export type OnStatus = (step: SyncStep) => void;
 
 export interface BankCreds {
@@ -55,10 +61,13 @@ export async function runSync(creds: BankCreds, onStatus: OnStatus): Promise<str
     // bank page keeps connections open (trackers/long-poll) so 'load' /
     // 'domcontentloaded' may never fire. Element locators below auto-wait for the
     // actual fields, so we don't need the page to be fully "loaded".
+    onStatus('navigating');
     await page.goto(LOGON_URL, { waitUntil: 'commit', timeout: 60_000 });
     // Cookie banner only appears on a fresh profile — ignore if absent.
     await page.getByRole('button', { name: 'Alle cookies aanvaarden' })
       .click({ timeout: 5_000 }).catch(() => {});
+
+    onStatus('logging_in');
     await page.getByRole('textbox', { name: 'Vul uw gsm-nummer in' }).fill(creds.gsm);
     await page.getByRole('textbox', { name: 'Klantnummer' }).fill(creds.client);
     await page.getByRole('button', { name: 'Aanmelden met itsme' }).click();
@@ -69,10 +78,12 @@ export async function runSync(creds: BankCreds, onStatus: OnStatus): Promise<str
     await page.waitForURL('**/secured/**', { timeout: 180_000 });
 
     // --- Navigate to the account and export the last 3 months as CSV ---
-    onStatus('downloading');
+    onStatus('navigating_account');
     await page.goto(ACCOUNTS_URL, { waitUntil: 'commit', timeout: 60_000 });
     await page.getByRole('link', { name: creds.accountLabel, exact: true }).click();
     await page.getByRole('link', { name: 'Zoeken Zoek en exporteer' }).click();
+
+    onStatus('downloading');
     await page.getByRole('textbox', { name: 'Zoek op bedrag, datum, naam,' }).click();
     // Rolling last-3-months window via the "Tussen <from> en <to>" date filter.
     // Rolling beats whole-year: no year-boundary gap and a smaller export; dedup

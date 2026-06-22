@@ -4,13 +4,29 @@ import { api } from '../api';
 import type { ImportSummary, SyncJob, SyncJobStatus, SyncSettings } from '../types';
 
 const STEP_TEXT: Record<SyncJobStatus, string> = {
-  idle: '',
-  launching: 'Launching browser…',
-  waiting_itsme: 'Confirm the login in your itsme app on your phone…',
-  downloading: 'Downloading transactions…',
-  importing: 'Importing…',
-  done: '',
-  error: '',
+  idle:               '',
+  launching:          'Starting browser…',
+  navigating:         'Opening Easy Banking login page…',
+  logging_in:         'Filling in your credentials…',
+  waiting_itsme:      'Confirm the sign-in in your itsme app on your phone…',
+  navigating_account: 'Login confirmed — navigating to your account…',
+  downloading:        'Downloading last 3 months of transactions…',
+  importing:          'Saving transactions…',
+  done:               'Done.',
+  error:              '',
+};
+
+const STEP_PROGRESS: Record<SyncJobStatus, number> = {
+  idle:               0,
+  launching:          8,
+  navigating:         20,
+  logging_in:         35,
+  waiting_itsme:      48,
+  navigating_account: 65,
+  downloading:        80,
+  importing:          93,
+  done:               100,
+  error:              0,
 };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -83,21 +99,26 @@ export default function Import() {
           Logs into Easy Banking Web and downloads the last 3 months. You confirm the
           login once in your itsme app.
         </p>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={syncNow}
-            disabled={syncing || !settings?.configured}
-            className="rounded bg-slate-900 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-40 dark:bg-slate-100 dark:text-slate-900"
-          >
-            {syncing ? 'Syncing…' : 'Sync now'}
-          </button>
-          {syncing && STEP_TEXT[syncStatus] && (
-            <span className="flex items-center gap-2 text-sm text-slate-500">
-              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
-              {STEP_TEXT[syncStatus]}
-            </span>
-          )}
-        </div>
+        <button
+          onClick={syncNow}
+          disabled={syncing || !settings?.configured}
+          className="rounded bg-slate-900 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-40 dark:bg-slate-100 dark:text-slate-900"
+        >
+          {syncing ? 'Syncing…' : 'Sync now'}
+        </button>
+        {syncStatus !== 'idle' && syncStatus !== 'error' && (
+          <div className="space-y-1.5">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+              <div
+                className={`h-full rounded-full bg-slate-900 transition-all duration-700 dark:bg-slate-100 ${syncStatus === 'waiting_itsme' ? 'animate-pulse' : ''}`}
+                style={{ width: `${STEP_PROGRESS[syncStatus]}%` }}
+              />
+            </div>
+            {STEP_TEXT[syncStatus] && (
+              <p className="text-xs text-slate-500">{STEP_TEXT[syncStatus]}</p>
+            )}
+          </div>
+        )}
         {settings && !settings.configured && (
           <p className="text-sm text-slate-500">
             No card number set yet —{' '}

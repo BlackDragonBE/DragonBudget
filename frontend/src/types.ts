@@ -187,7 +187,8 @@ export interface ImportSummary {
 }
 
 export type SyncJobStatus =
-  | 'idle' | 'launching' | 'waiting_itsme' | 'downloading' | 'importing' | 'done' | 'error';
+  | 'idle' | 'launching' | 'navigating' | 'logging_in' | 'waiting_itsme'
+  | 'navigating_account' | 'downloading' | 'importing' | 'done' | 'error';
 
 export interface SyncJob {
   status: SyncJobStatus;

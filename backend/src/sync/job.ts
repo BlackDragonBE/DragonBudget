@@ -21,7 +21,7 @@ export function getJob(): Job {
   return current;
 }
 
-const RUNNING = new Set<JobStatus>(['launching', 'waiting_itsme', 'downloading', 'importing']);
+const RUNNING = new Set<JobStatus>(['launching', 'navigating', 'logging_in', 'waiting_itsme', 'navigating_account', 'downloading', 'importing']);
 export function isRunning(): boolean {
   return RUNNING.has(current.status);
 }
