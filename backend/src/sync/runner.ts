@@ -137,9 +137,25 @@ export async function runSync(creds: BankCreds, onStatus: OnStatus): Promise<{ c
     // Match the manual-upload path, which reads the CSV as UTF-8.
     const csv = await fs.promises.readFile(downloadPath, 'utf8');
     return { csv, accounts };
+  } catch (err) {
+    // Production runs headless under xvfb, so a selector that breaks (BNPPF UI
+    // change, skipped login step, covering consent banner) is otherwise invisible.
+    // Dump what the browser is actually showing to the /data volume so the failure
+    // can be diagnosed precisely instead of guessed at. Best-effort; never masks err.
+    await dumpFailure(ctx).catch(() => {});
+    throw err;
   } finally {
     await ctx.close();
   }
+}
+
+// Save a screenshot + raw HTML of the current page to DATA_DIR on a sync failure.
+async function dumpFailure(ctx: import('playwright').BrowserContext): Promise<void> {
+  const page = ctx.pages()[0];
+  if (!page) return;
+  await page.screenshot({ path: path.join(DATA_DIR, 'sync-error.png'), fullPage: true });
+  const html = await page.content();
+  await fs.promises.writeFile(path.join(DATA_DIR, 'sync-error.html'), html, 'utf8');
 }
 
 // Scrape every account (current + savings) and its live balance off the accounts
