@@ -1,4 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area,
 } from 'recharts';
@@ -45,7 +46,11 @@ type ChartColors = { grid: string; tick: string; tooltip: object };
 // Small multiples: one mini trend chart per category, biggest total first.
 // Each cell scales to its own max (independent y-axis) so small categories stay
 // legible; the header total carries absolute magnitude.
-function CategorySmallMultiples({ trends, chartColors }: { trends: CategoryTrends; chartColors: ChartColors }) {
+function CategorySmallMultiples({ trends, chartColors, onCellClick }: {
+  trends: CategoryTrends;
+  chartColors: ChartColors;
+  onCellClick: (categoryId: number, month: string) => void;
+}) {
   const cells = trends.categories
     .map((c, i) => {
       const series = trends.data.map((row) => ({ month: row.month as string, value: (row[c.name] as number) ?? 0 }));
@@ -62,9 +67,13 @@ function CategorySmallMultiples({ trends, chartColors }: { trends: CategoryTrend
             <span className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{c.name}</span>
             <span className="text-xs tabular-nums text-slate-500">{euros(c.total)}</span>
           </div>
-          <div className="mt-1 h-12 w-full">
+          <div className="mt-1 h-12 w-full cursor-pointer" title="Click a point to view transactions">
             <ResponsiveContainer>
-              <AreaChart data={c.series} margin={{ top: 4, right: 2, bottom: 0, left: 2 }}>
+              <AreaChart
+                data={c.series}
+                margin={{ top: 4, right: 2, bottom: 0, left: 2 }}
+                onClick={(d) => { if (d?.activeLabel) onCellClick(c.id, d.activeLabel as string); }}
+              >
                 <XAxis dataKey="month" hide />
                 <Tooltip
                   formatter={(v: number) => euros(v)}
@@ -85,6 +94,7 @@ function CategorySmallMultiples({ trends, chartColors }: { trends: CategoryTrend
 }
 
 export default function AllTime() {
+  const navigate = useNavigate();
   const dark = useDark();
   const chartColors = {
     grid: dark ? '#334155' : '#f1f5f9',
@@ -176,7 +186,7 @@ export default function AllTime() {
         {trends.data.length === 0 ? (
           <p className="text-sm text-slate-400">No spending in this range.</p>
         ) : (
-          <CategorySmallMultiples trends={trends} chartColors={chartColors} />
+          <CategorySmallMultiples trends={trends} chartColors={chartColors} onCellClick={(id, month) => navigate(`/transactions?category_id=${id === 0 ? 'none' : id}&month=${month}`)} />
         )}
       </section>
 
@@ -185,7 +195,7 @@ export default function AllTime() {
         {incomeTrends.data.length === 0 ? (
           <p className="text-sm text-slate-400">No income in this range.</p>
         ) : (
-          <CategorySmallMultiples trends={incomeTrends} chartColors={chartColors} />
+          <CategorySmallMultiples trends={incomeTrends} chartColors={chartColors} onCellClick={(id, month) => navigate(`/transactions?category_id=${id === 0 ? 'none' : id}&month=${month}`)} />
         )}
       </section>
     </div>

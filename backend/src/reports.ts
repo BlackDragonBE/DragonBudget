@@ -246,12 +246,31 @@ export function categoryTrends(db: DB, opts: { from?: string; to?: string; isInc
               GROUP BY month, c.id ORDER BY month`)
     .all(...params) as { month: string; id: number; name: string; color: string | null; spent: number }[];
 
+  // Uncategorized rows: no JOIN possible, filter by amount sign instead of is_income.
+  const uncatWhere = ["t.status = 'accepted'", "t.is_transfer = 0", "t.category_id IS NULL", "t.execution_date IS NOT NULL",
+    opts.isIncome ? "t.amount_cents > 0" : "t.amount_cents < 0"];
+  const uncatParams: string[] = [];
+  if (opts.from) { uncatWhere.push("substr(t.execution_date,1,7) >= ?"); uncatParams.push(opts.from); }
+  if (opts.to) { uncatWhere.push("substr(t.execution_date,1,7) <= ?"); uncatParams.push(opts.to); }
+  const uncatRows = db
+    .prepare(`SELECT substr(t.execution_date,1,7) AS month, SUM(t.amount_cents) AS spent
+              FROM transactions t WHERE ${uncatWhere.join(' AND ')} GROUP BY month`)
+    .all(...uncatParams) as { month: string; spent: number }[];
+
   const cats = new Map<number, { id: number; name: string; color: string | null }>();
   const byMonth = new Map<string, Record<string, number | string>>();
   for (const r of rows) {
     cats.set(r.id, { id: r.id, name: r.name, color: r.color });
     if (!byMonth.has(r.month)) byMonth.set(r.month, { month: r.month });
     byMonth.get(r.month)![r.name] = Math.abs(r.spent);
+  }
+  // id=0 is the sentinel for "Uncategorized" (real IDs start at 1).
+  if (uncatRows.length > 0) {
+    cats.set(0, { id: 0, name: 'Uncategorized', color: null });
+    for (const r of uncatRows) {
+      if (!byMonth.has(r.month)) byMonth.set(r.month, { month: r.month });
+      byMonth.get(r.month)!['Uncategorized'] = Math.abs(r.spent);
+    }
   }
   return { categories: [...cats.values()], data: [...byMonth.values()] };
 }
