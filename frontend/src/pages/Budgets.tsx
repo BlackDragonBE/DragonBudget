@@ -161,9 +161,11 @@ export default function Budgets() {
               if (monthsLeft > 0) {
                 const needed = Math.ceil((goalCents - savedCents) / monthsLeft);
                 const limit = row?.limit_cents ?? 0;
-                onTrackLabel = limit >= needed
-                  ? `On track for ${goalDate.slice(0, 7)}`
-                  : `Need ${euros(needed)}/mo for ${goalDate.slice(0, 7)}`;
+                onTrackLabel = limit > needed
+                  ? `Saving extra ${euros(limit - needed)}/mo for ${goalDate.slice(0, 7)}`
+                  : limit === needed
+                    ? `On track for ${goalDate.slice(0, 7)}`
+                    : `Need ${euros(needed)}/mo for ${goalDate.slice(0, 7)}`;
               } else if (monthsLeft === 0) {
                 onTrackLabel = 'Goal month reached';
               }
