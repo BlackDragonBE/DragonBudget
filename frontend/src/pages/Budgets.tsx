@@ -226,6 +226,8 @@ export default function Budgets() {
                   />
                   <button
                     title={isRollover ? 'Sinking fund on — click to disable' : 'Enable sinking fund (rollover)'}
+                    aria-label={`${isRollover ? 'Disable' : 'Enable'} sinking fund for ${c.name}`}
+                    aria-pressed={isRollover}
                     onClick={() => toggleRollover(c.id, c.rollover)}
                     className={`shrink-0 rounded px-1 text-base leading-none transition-colors ${isRollover ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400'}`}
                   >

@@ -58,6 +58,7 @@ export default function Categories() {
 }
 
 function CategoryRow({ category, onChange }: { category: Category; onChange: () => void }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const patch = (body: Record<string, unknown>) =>
     api(`/categories/${category.id}`, { method: 'PATCH', body: JSON.stringify(body) }).then(onChange);
 
@@ -78,6 +79,8 @@ function CategoryRow({ category, onChange }: { category: Category; onChange: () 
       />
       <input
         type="color"
+        aria-label={`Color for ${category.name}`}
+        title="Category color"
         defaultValue={category.color ?? '#64748b'}
         onChange={(e) => patch({ color: e.target.value })}
         className="h-8 w-10 rounded border border-slate-200 dark:border-slate-700"
@@ -98,20 +101,32 @@ function CategoryRow({ category, onChange }: { category: Category; onChange: () 
       >
         {archived ? 'Restore' : 'Archive'}
       </button>
-      <button
-        onClick={async () => {
-          if (!confirm(`Permanently delete "${category.name}"?`)) return;
-          try {
-            await api(`/categories/${category.id}`, { method: 'DELETE' });
-            onChange();
-          } catch (e) {
-            alert((e as Error).message);
-          }
-        }}
-        className="rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
-      >
-        Delete
-      </button>
+      {confirmDelete ? (
+        <>
+          <button
+            onClick={() =>
+              // Failure is toasted by api(); leave the row as-is.
+              api(`/categories/${category.id}`, { method: 'DELETE' }).then(onChange).catch(() => setConfirmDelete(false))
+            }
+            className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700"
+          >
+            Delete “{category.name}”?
+          </button>
+          <button
+            onClick={() => setConfirmDelete(false)}
+            className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-800"
+          >
+            Cancel
+          </button>
+        </>
+      ) : (
+        <button
+          onClick={() => setConfirmDelete(true)}
+          className="rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
+        >
+          Delete
+        </button>
+      )}
     </div>
   );
 }

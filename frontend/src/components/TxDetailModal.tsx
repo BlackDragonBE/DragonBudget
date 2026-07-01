@@ -1,17 +1,29 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { euros, shortDate } from '../format';
 import type { Tx } from '../types';
 
 export function TxDetailModal({ tx, onClose, onSaveNote }: { tx: Tx; onClose: () => void; onSaveNote: (note: string | null) => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  // Move focus into the dialog on open, back to the trigger on close.
+  useEffect(() => {
+    const trigger = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    return () => trigger?.focus();
+  }, []);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Transaction details: ${tx.counterparty_name || tx.transaction_type}`}
         className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-slate-200 bg-white p-5 shadow-xl sm:p-6 dark:border-slate-700 dark:bg-slate-900"
         onClick={(e) => e.stopPropagation()}
       >
@@ -25,7 +37,7 @@ export function TxDetailModal({ tx, onClose, onSaveNote }: { tx: Tx; onClose: ()
               <span className="mt-1 inline-block rounded bg-purple-100 px-1.5 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900 dark:text-purple-300">transfer — excluded from income/expense</span>
             ) : null}
           </div>
-          <button onClick={onClose} className="ml-4 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">✕</button>
+          <button ref={closeRef} onClick={onClose} aria-label="Close" className="ml-4 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">✕</button>
         </div>
 
         <dl className="space-y-2 text-sm">

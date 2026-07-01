@@ -45,6 +45,16 @@ export default function Dashboard() {
         />
       </div>
 
+      {report && incomeCats.length === 0 && expenseCats.length === 0 && (
+        <p className="rounded border border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+          No transactions for this month yet.{' '}
+          <Link to="/import" className="font-medium text-blue-600 underline dark:text-blue-400">
+            Import a CSV or sync from your bank
+          </Link>{' '}
+          to get started.
+        </p>
+      )}
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Stat label="Income" value={euros(report?.income_cents ?? 0)} tone="text-green-700" />
         <Stat label="Expenses" value={euros(Math.abs(report?.expense_cents ?? 0))} tone="text-slate-900 dark:text-slate-100" />

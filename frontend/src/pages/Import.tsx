@@ -147,6 +147,7 @@ export default function Import() {
         </p>
         <input
           type="file"
+          aria-label="CSV file to import"
           accept=".csv,text/csv"
           onChange={(e) => {
             setFile(e.target.files?.[0] ?? null);

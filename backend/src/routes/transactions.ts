@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { db } from '../db';
+import { db, type DB } from '../db';
 import { maybeSuggestRule } from '../categorize/suggest';
 
 export const transactionsRouter = Router();
@@ -28,7 +28,7 @@ export function resolveSort(query: { sort?: unknown; order?: unknown }): { col: 
   };
 }
 
-function buildTxWhere(query: Record<string, unknown>): { whereSql: string; params: (string | number)[] } {
+export function buildTxWhere(query: Record<string, unknown>): { whereSql: string; params: (string | number)[] } {
   const where: string[] = [];
   const params: (string | number)[] = [];
 
@@ -37,6 +37,12 @@ function buildTxWhere(query: Record<string, unknown>): { whereSql: string; param
     where.push('substr(t.execution_date,1,7) = ?');
     params.push(month);
   }
+
+  // from/to are inclusive YYYY-MM-DD bounds on execution_date; ISO strings compare lexically.
+  const from = query.from ? String(query.from) : '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(from)) { where.push('t.execution_date >= ?'); params.push(from); }
+  const to = query.to ? String(query.to) : '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(to)) { where.push('t.execution_date <= ?'); params.push(to); }
 
   const category = query.category_id ? String(query.category_id) : '';
   if (category === 'none') where.push('t.category_id IS NULL');
@@ -120,6 +126,34 @@ transactionsRouter.delete('/', (_req, res) => {
   db.prepare('DELETE FROM recurring_expenses').run();
   db.prepare('DELETE FROM transactions').run();
   res.json({ ok: true });
+});
+
+// PATCH /api/transactions/bulk — categorize many at once (manual source, same as /:id).
+// Must be before /:id so Express doesn't treat "bulk" as an id.
+const BulkPatch = z.object({
+  ids: z.array(z.number().int()).min(1).max(500),
+  category_id: z.number().int().nullable(),
+});
+
+export function bulkCategorize(dbc: DB, ids: number[], categoryId: number | null): number {
+  const placeholders = ids.map(() => '?').join(',');
+  const updated = categoryId === null
+    ? dbc.prepare(`UPDATE transactions SET category_id = NULL, category_source = NULL WHERE id IN (${placeholders})`).run(...ids)
+    : dbc.prepare(`UPDATE transactions SET category_id = ?, category_source = 'manual' WHERE id IN (${placeholders})`).run(categoryId, ...ids);
+  if (categoryId !== null) for (const id of ids) maybeSuggestRule(dbc, id);
+  return Number(updated.changes);
+}
+
+transactionsRouter.patch('/bulk', (req, res) => {
+  const p = BulkPatch.safeParse(req.body);
+  if (!p.success) return res.status(400).json({ error: p.error.issues[0].message });
+  const { ids, category_id } = p.data;
+
+  if (category_id !== null && !db.prepare('SELECT 1 FROM categories WHERE id = ?').get(category_id)) {
+    return res.status(400).json({ error: 'unknown category' });
+  }
+
+  res.json({ updated: bulkCategorize(db, ids, category_id) });
 });
 
 // GET /api/transactions/:id

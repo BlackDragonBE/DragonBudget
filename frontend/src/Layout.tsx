@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { api } from './api';
+import { Toasts } from './components/Toast';
 
 // Nav grows as milestones land. Transactions + Import wired in M2.
 const NAV = [
@@ -18,6 +19,8 @@ const NAV = [
 
 export default function Layout({ authRequired = false }: { authRequired?: boolean }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { pathname } = useLocation();
+  const currentPage = NAV.find((n) => pathname.startsWith(n.to))?.label;
 
   async function logout() {
     await api('/auth/logout', { method: 'POST', body: '{}' });
@@ -38,6 +41,11 @@ export default function Layout({ authRequired = false }: { authRequired?: boolea
           {/* Top bar: logo + (desktop nav) + hamburger */}
           <div className="flex items-center gap-x-4 py-3">
             <span className="text-lg font-semibold">🐉 DragonBudget</span>
+
+            {/* Current page name on mobile, where the nav is hidden behind the hamburger */}
+            {currentPage && (
+              <span className="text-sm text-slate-500 md:hidden dark:text-slate-400">{currentPage}</span>
+            )}
 
             {/* Desktop / wide nav */}
             <nav className="hidden flex-wrap gap-1 md:flex">
@@ -104,6 +112,7 @@ export default function Layout({ authRequired = false }: { authRequired?: boolea
       <main className="mx-auto max-w-5xl p-4">
         <Outlet />
       </main>
+      <Toasts />
     </div>
   );
 }

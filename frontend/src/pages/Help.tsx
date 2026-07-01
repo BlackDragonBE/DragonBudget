@@ -46,8 +46,27 @@ const DOCS = [
 
 export default function Help() {
   const [activeId, setActiveId] = useState(DOCS[0].id);
+  const [activeSection, setActiveSection] = useState('');
   const [search, setSearch] = useState('');
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Scroll-spy: highlight the sidebar section whose heading is near the top of the pane.
+  useEffect(() => {
+    setActiveSection('');
+    const root = contentRef.current;
+    if (!root) return;
+    const headings = Array.from(root.querySelectorAll('h2[id]'));
+    if (!headings.length) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting);
+        if (visible.length) setActiveSection((visible[0].target as HTMLElement).id);
+      },
+      { root, rootMargin: '0px 0px -70% 0px' },
+    );
+    headings.forEach((h) => io.observe(h));
+    return () => io.disconnect();
+  }, [activeId]);
 
   const term = search.toLowerCase().trim();
 
@@ -88,6 +107,7 @@ export default function Help() {
       <aside className="w-52 shrink-0 sticky top-4 self-start" style={{ maxHeight: 'calc(100vh - 5rem)', overflowY: 'auto' }}>
         <input
           type="search"
+          aria-label="Search help"
           placeholder="Search…"
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -121,7 +141,11 @@ export default function Help() {
                   <button
                     key={s.slug}
                     onClick={() => selectDoc(doc.id, s.slug)}
-                    className="w-full text-left rounded px-4 py-1 text-xs text-slate-500 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors"
+                    className={`w-full text-left rounded px-4 py-1 text-xs transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 ${
+                      s.slug === activeSection
+                        ? 'font-semibold text-slate-900 dark:text-slate-100'
+                        : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
+                    }`}
                   >
                     {s.text}
                   </button>
