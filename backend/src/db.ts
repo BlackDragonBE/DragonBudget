@@ -9,6 +9,9 @@ export type DB = DatabaseSync;
 // Open a DB at `file` (':memory:' for tests), apply schema, seed defaults.
 export function createDb(file: string): DB {
   const conn = new DatabaseSync(file);
+  // Wait instead of throwing SQLITE_BUSY when several processes open the same file
+  // (concurrent node --test processes all import the db singleton below).
+  conn.exec('PRAGMA busy_timeout = 5000');
   conn.exec('PRAGMA journal_mode = WAL');
   conn.exec('PRAGMA foreign_keys = ON');
   conn.exec(SCHEMA);
