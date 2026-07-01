@@ -74,9 +74,19 @@ export default function Import() {
     try {
       let job = await api<SyncJob>('/sync/start', { method: 'POST' });
       setSyncStatus(job.status);
+      let failures = 0;
       while (job.status !== 'done' && job.status !== 'error' && job.status !== 'idle') {
         await sleep(2000);
-        job = await api<SyncJob>('/sync/status');
+        try {
+          job = await api<SyncJob>('/sync/status');
+          failures = 0;
+        } catch (e) {
+          // Transient network hiccup (e.g. phone backgrounding the tab to switch to
+          // itsme and back) — the job keeps running server-side, so keep polling
+          // instead of abandoning it after a single failed fetch.
+          if (++failures >= 5) throw e;
+          continue;
+        }
         setSyncStatus(job.status);
       }
       if (job.status === 'error') setSyncError(job.error || 'Sync failed.');
