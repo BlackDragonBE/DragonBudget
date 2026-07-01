@@ -88,12 +88,14 @@ export function listSuggestions(db: DB) {
   }));
 }
 
-/** Accept: create the real rule (flagged created_from_suggestion) and apply it. */
-export function acceptSuggestion(db: DB, id: number): { updated: number } | null {
+/** Accept: create the real rule (flagged created_from_suggestion) and apply it.
+ *  categoryId overrides the suggested category when the user picks a different one. */
+export function acceptSuggestion(db: DB, id: number, categoryId?: number): { updated: number } | null {
   const s = db.prepare("SELECT * FROM rule_suggestions WHERE id = ? AND status = 'pending'").get(id) as
     | { id: number; token: string; match_field: string; match_type: string; category_id: number }
     | undefined;
   if (!s) return null;
+  if (categoryId != null) s.category_id = categoryId;
   // Create the rule and consume the suggestion atomically, so a failure can't
   // leave the suggestion pending alongside a created rule (→ duplicate on retry).
   // applyRules() runs after — it has its own transaction (can't nest) and is

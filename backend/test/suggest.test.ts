@@ -66,6 +66,24 @@ test('acceptSuggestion: creates a rule, applies it, consumes the suggestion atom
   assert.equal((db.prepare("SELECT COUNT(*) AS n FROM category_rules WHERE match_value = 'KRUIDVAT'").get() as { n: number }).n, 1);
 });
 
+test('acceptSuggestion: category override creates the rule in the chosen category', () => {
+  const db = createDb(':memory:');
+  const a = insertKruidvat(db);
+  insertKruidvat(db);
+  insertKruidvat(db);
+  db.prepare("UPDATE transactions SET category_id = 1, category_source = 'manual' WHERE id = ?").run(a);
+  maybeSuggestRule(db, a); // suggests category 1
+
+  const id = (db.prepare("SELECT id FROM rule_suggestions WHERE status = 'pending'").get() as { id: number }).id;
+  const result = acceptSuggestion(db, id, 2); // user picked a different category on accept
+  assert.equal(result?.updated, 2);
+
+  const rule = db.prepare("SELECT category_id FROM category_rules WHERE match_value = 'KRUIDVAT'").get() as
+    { category_id: number } | undefined;
+  assert.equal(rule?.category_id, 2);
+  assert.equal((db.prepare('SELECT COUNT(*) AS n FROM transactions WHERE category_id = 2').get() as { n: number }).n, 2);
+});
+
 function insertTx(db: DB, { name = null as string | null, details = '', cat = null as number | null } = {}): number {
   return Number(
     db

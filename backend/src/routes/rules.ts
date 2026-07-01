@@ -10,7 +10,12 @@ export const rulesRouter = Router();
 rulesRouter.get('/suggestions', (_req, res) => res.json(listSuggestions(db)));
 
 rulesRouter.post('/suggestions/:id/accept', (req, res) => {
-  const result = acceptSuggestion(db, Number(req.params.id));
+  const p = z.object({ category_id: z.number().int().optional() }).safeParse(req.body ?? {});
+  if (!p.success) return res.status(400).json({ error: p.error.issues[0].message });
+  if (p.data.category_id != null && !db.prepare('SELECT 1 FROM categories WHERE id = ?').get(p.data.category_id)) {
+    return res.status(400).json({ error: 'unknown category' });
+  }
+  const result = acceptSuggestion(db, Number(req.params.id), p.data.category_id);
   if (!result) return res.status(404).json({ error: 'no pending suggestion' });
   res.json(result);
 });

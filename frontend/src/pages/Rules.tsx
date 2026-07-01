@@ -23,6 +23,7 @@ export default function Rules() {
   const [search, setSearch] = useState('');
   const [applyMsg, setApplyMsg] = useState('');
   const [previewSuggId, setPreviewSuggId] = useState<number | null>(null);
+  const [suggCat, setSuggCat] = useState<Record<number, number>>({}); // per-suggestion category override
   const [selectedTx, setSelectedTx] = useState<Tx | null>(null);
   const openTx = (id: number) => api<Tx>(`/transactions/${id}`).then(setSelectedTx);
 
@@ -36,7 +37,8 @@ export default function Rules() {
   }
 
   async function accept(id: number) {
-    await api(`/rules/suggestions/${id}/accept`, { method: 'POST', body: '{}' });
+    const category_id = suggCat[id]; // undefined = keep the suggested category
+    await api(`/rules/suggestions/${id}/accept`, { method: 'POST', body: JSON.stringify({ category_id }) });
     reload();
     reloadSuggestions();
   }
@@ -61,9 +63,18 @@ export default function Rules() {
           {suggestions.map((s) => (
             <div key={s.id} className="rounded bg-white px-3 py-2 text-sm dark:bg-slate-800">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span>
+                <span className="flex flex-wrap items-center gap-1.5">
                   Transactions containing <span className="font-medium">"{s.token}"</span> →{' '}
-                  <span>{s.category_icon} {s.category_name}</span>{' '}
+                  <select
+                    value={suggCat[s.id] ?? s.category_id}
+                    onChange={(e) => setSuggCat((m) => ({ ...m, [s.id]: Number(e.target.value) }))}
+                    aria-label="Category for this rule"
+                    className="rounded border border-slate-300 px-2 py-1 text-xs dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                    ))}
+                  </select>
                   <span className="text-slate-400">({s.match_count} uncategorized match)</span>
                 </span>
                 <span className="flex gap-2">
@@ -201,6 +212,7 @@ function NewRuleForm({ categories, onCreated, onOpenTx }: { categories: Category
 
 function RuleRow({ rule, categories, onChange, onOpenTx }: { rule: Rule; categories: Category[]; onChange: () => void; onOpenTx: (id: number) => void }) {
   const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [field, setField] = useState(rule.match_field as string);
   const [type, setType] = useState(rule.match_type as string);
   const [value, setValue] = useState(rule.match_value);
@@ -314,9 +326,26 @@ function RuleRow({ rule, categories, onChange, onOpenTx }: { rule: Rule; categor
       <button onClick={() => setEditing(true)} className="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800">
         Edit
       </button>
-      <button onClick={remove} className="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950">
-        Delete
-      </button>
+      {confirmDelete ? (
+        <>
+          <button onClick={remove} className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700">
+            Delete rule?
+          </button>
+          <button
+            onClick={() => setConfirmDelete(false)}
+            className="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800"
+          >
+            Cancel
+          </button>
+        </>
+      ) : (
+        <button
+          onClick={() => setConfirmDelete(true)}
+          className="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
+        >
+          Delete
+        </button>
+      )}
     </div>
   );
 }
